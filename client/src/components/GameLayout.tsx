@@ -5,6 +5,8 @@ import { QueueScreen } from './QueueScreen';
 import { GameScreen } from './GameScreen';
 import { StatsScreen } from './StatsScreen';
 import { LeaderboardScreen } from './LeaderboardScreen';
+import { TournamentScreen } from './TournamentScreen';
+import { TournamentBanner } from './TournamentBanner';
 import { useGameState } from '../stores/useGameState';
 
 export function GameLayout() {
@@ -20,6 +22,10 @@ export function GameLayout() {
         return <GameScreen />;
       case 'leaderboard':
         return <LeaderboardScreen onBack={() => setCurrentScreen('main')} />;
+      case 'tournaments':
+        return <TournamentScreen />;
+      case 'tournament-bracket':
+        return <div className="text-center text-white">Tournament Bracket (Coming Soon)</div>;
       default:
         return <MainMenu />;
     }
@@ -27,9 +33,10 @@ export function GameLayout() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
+      <TournamentBanner />
       <div className="container mx-auto px-4 py-6">
-        {currentScreen !== 'queue' && currentScreen !== 'game' && currentScreen !== 'leaderboard' && <PlayerCard />}
-        <div className={currentScreen !== 'queue' && currentScreen !== 'game' && currentScreen !== 'leaderboard' ? 'mt-6' : ''}>
+        {currentScreen !== 'queue' && currentScreen !== 'game' && currentScreen !== 'leaderboard' && currentScreen !== 'tournaments' && currentScreen !== 'tournament-bracket' && <PlayerCard />}
+        <div className={currentScreen !== 'queue' && currentScreen !== 'game' && currentScreen !== 'leaderboard' && currentScreen !== 'tournaments' && currentScreen !== 'tournament-bracket' ? 'mt-6' : ''}>
           {renderScreen()}
         </div>
       </div>

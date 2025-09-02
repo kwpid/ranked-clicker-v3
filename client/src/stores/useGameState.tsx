@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 interface GameState {
-  currentScreen: 'main' | 'queue' | 'game' | 'leaderboard';
+  currentScreen: 'main' | 'queue' | 'game' | 'leaderboard' | 'tournaments' | 'tournament-bracket';
   queueMode: 'casual' | 'ranked' | null;
   gameMode: '1v1' | '2v2' | '3v3' | null;
   showStatsModal: boolean;
@@ -11,7 +11,7 @@ interface GameState {
     isTeammate: boolean;
   }>;
   
-  setCurrentScreen: (screen: 'main' | 'queue' | 'game' | 'leaderboard') => void;
+  setCurrentScreen: (screen: 'main' | 'queue' | 'game' | 'leaderboard' | 'tournaments' | 'tournament-bracket') => void;
   setQueueMode: (mode: 'casual' | 'ranked') => void;
   setGameMode: (mode: '1v1' | '2v2' | '3v3') => void;
   setShowStatsModal: (show: boolean) => void;

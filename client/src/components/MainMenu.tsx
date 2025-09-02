@@ -1,13 +1,16 @@
 import React from 'react';
 import { useGameState } from '../stores/useGameState';
+import { useTournament } from '../stores/useTournament';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Trophy, Users, Zap, Crown } from 'lucide-react';
 
 export function MainMenu() {
   const { setQueueMode, setCurrentScreen } = useGameState();
+  const { isGameModeBlocked } = useTournament();
 
   const handleQueueSelection = (mode: 'casual' | 'ranked') => {
+    if (isGameModeBlocked()) return; // Block if in tournament queue
     setQueueMode(mode);
     setCurrentScreen('queue');
   };
@@ -24,13 +27,21 @@ export function MainMenu() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="bg-gray-800 border-gray-700 hover:border-blue-500 transition-all duration-300 cursor-pointer group"
+        <Card className={`bg-gray-800 border-gray-700 transition-all duration-300 cursor-pointer group ${
+                isGameModeBlocked() 
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : 'hover:border-blue-500'
+              }`}
               onClick={() => handleQueueSelection('casual')}>
           <CardHeader className="text-center">
-            <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/25">
+            <div className={`w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors shadow-lg shadow-blue-500/25 ${
+                !isGameModeBlocked() ? 'group-hover:bg-blue-500' : ''
+              }`}>
               <Users className="w-8 h-8 text-white" />
             </div>
-            <CardTitle className="text-2xl text-white">Queue Casual</CardTitle>
+            <CardTitle className="text-2xl text-white">
+              Queue Casual {isGameModeBlocked() && <span className="text-red-400 text-sm">(Locked)</span>}
+            </CardTitle>
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-gray-400 mb-4">
@@ -44,13 +55,21 @@ export function MainMenu() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-800 border-gray-700 hover:border-purple-500 transition-all duration-300 cursor-pointer group"
+        <Card className={`bg-gray-800 border-gray-700 transition-all duration-300 cursor-pointer group ${
+                isGameModeBlocked() 
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : 'hover:border-purple-500'
+              }`}
               onClick={() => handleQueueSelection('ranked')}>
           <CardHeader className="text-center">
-            <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-500 transition-colors shadow-lg shadow-purple-500/25">
+            <div className={`w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors shadow-lg shadow-purple-500/25 ${
+                !isGameModeBlocked() ? 'group-hover:bg-purple-500' : ''
+              }`}>
               <Trophy className="w-8 h-8 text-white" />
             </div>
-            <CardTitle className="text-2xl text-white">Queue Ranked</CardTitle>
+            <CardTitle className="text-2xl text-white">
+              Queue Ranked {isGameModeBlocked() && <span className="text-red-400 text-sm">(Locked)</span>}
+            </CardTitle>
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-gray-400 mb-4">
@@ -65,19 +84,34 @@ export function MainMenu() {
         </Card>
       </div>
 
-      {/* Leaderboard Button */}
-      <div className="mt-6 text-center">
-        <Card className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border-yellow-600/30 hover:border-yellow-500/50 transition-all duration-300 cursor-pointer group max-w-sm mx-auto"
+      {/* Secondary Options */}
+      <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center">
+        <Card className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border-yellow-600/30 hover:border-yellow-500/50 transition-all duration-300 cursor-pointer group flex-1 max-w-xs"
               onClick={() => setCurrentScreen('leaderboard')}>
           <CardHeader className="text-center pb-3">
-            <div className="w-12 h-12 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:from-yellow-500 group-hover:to-orange-500 transition-all shadow-lg shadow-yellow-500/25">
-              <Crown className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-2 group-hover:from-yellow-500 group-hover:to-orange-500 transition-all shadow-lg shadow-yellow-500/25">
+              <Crown className="w-5 h-5 text-white" />
             </div>
-            <CardTitle className="text-lg text-yellow-400">Competitive Leaderboards</CardTitle>
+            <CardTitle className="text-base text-yellow-400">Leaderboards</CardTitle>
           </CardHeader>
           <CardContent className="text-center pt-0">
-            <p className="text-gray-400 text-sm">
-              See the top 25 Grand Champions in each playlist
+            <p className="text-gray-400 text-xs">
+              Top Grand Champions
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-r from-red-900/20 to-pink-900/20 border-red-600/30 hover:border-red-500/50 transition-all duration-300 cursor-pointer group flex-1 max-w-xs"
+              onClick={() => setCurrentScreen('tournaments')}>
+          <CardHeader className="text-center pb-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-red-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-2 group-hover:from-red-500 group-hover:to-pink-500 transition-all shadow-lg shadow-red-500/25">
+              <Trophy className="w-5 h-5 text-white" />
+            </div>
+            <CardTitle className="text-base text-red-400">Tournaments</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center pt-0">
+            <p className="text-gray-400 text-xs">
+              Competitive brackets
             </p>
           </CardContent>
         </Card>
