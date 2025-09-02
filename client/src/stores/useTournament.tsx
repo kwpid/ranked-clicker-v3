@@ -290,8 +290,8 @@ export const useTournament = create<TournamentState>()(
           // Tournament finished
           const winner = winners[0];
           if (winner.isPlayer) {
-            // Player won the tournament!
-            get().awardTournamentTitle(state.currentTournament.type, 'Grand Champion');
+            // Player won the tournament! Award title based on actual rank
+            // The title will be awarded in completeTournamentGame when the final match completes
           }
           
           set(state => ({
@@ -372,15 +372,55 @@ export const useTournament = create<TournamentState>()(
       awardTournamentTitle: (tournamentType: TournamentType, playerRank: string) => {
         const state = get();
         const season = state.currentSeason;
-        const titleId = `s${season}-${tournamentType}-${playerRank.toLowerCase().replace(' ', '-')}-${Date.now()}`;
+        const baseRank = playerRank.split(' ')[0]; // Get "Silver", "Gold", etc.
         
-        // Count current season wins for this tournament type
-        const seasonKey = `s${season}-${tournamentType}`;
+        // Count current season wins for this tournament type + rank
+        const seasonKey = `s${season}-${tournamentType}-${baseRank}`;
         const currentWins = (state.seasonTournamentWins[seasonKey] || 0) + 1;
         
-        // Determine title color - make Grand Champion titles always golden with glow
+        // Check if this exact title already exists for this season
+        const existingTitleIndex = state.tournamentTitles.findIndex(
+          title => title.season === season && 
+                   title.rank === baseRank && 
+                   title.name.includes(tournamentType.toUpperCase())
+        );
+        
+        if (existingTitleIndex !== -1) {
+          // Title already exists, just update the color and win count
+          let color: 'default' | 'green' | 'golden' = 'default';
+          if (baseRank === 'Grand Champion') {
+            color = currentWins >= 3 ? 'golden' : 'golden'; // Grand Champion always golden, red after 3 wins
+          } else if (currentWins >= 3) {
+            color = 'green';
+          }
+          
+          // Update existing title
+          set(state => {
+            const updatedTitles = [...state.tournamentTitles];
+            updatedTitles[existingTitleIndex] = {
+              ...updatedTitles[existingTitleIndex],
+              wins: currentWins,
+              color: currentWins >= 3 ? (baseRank === 'Grand Champion' ? 'golden' : 'green') : updatedTitles[existingTitleIndex].color
+            };
+            
+            return {
+              tournamentTitles: updatedTitles,
+              seasonTournamentWins: {
+                ...state.seasonTournamentWins,
+                [seasonKey]: currentWins
+              }
+            };
+          });
+          
+          return; // Don't create a new title
+        }
+        
+        // Create new title since it doesn't exist
+        const titleId = `s${season}-${tournamentType}-${baseRank.toLowerCase().replace(' ', '-')}`;
+        
+        // Determine title color
         let color: 'default' | 'green' | 'golden' = 'default';
-        if (playerRank === 'Grand Champion') {
+        if (baseRank === 'Grand Champion') {
           color = 'golden'; // Grand Champion titles are always golden
         } else if (currentWins >= 3) {
           color = 'green';
@@ -388,9 +428,9 @@ export const useTournament = create<TournamentState>()(
         
         const newTitle: TournamentTitle = {
           id: titleId,
-          name: `S${season} ${playerRank.toUpperCase()} TOURNAMENT WINNER`,
+          name: `S${season} ${baseRank.toUpperCase()} TOURNAMENT WINNER`,
           season,
-          rank: playerRank,
+          rank: baseRank,
           wins: currentWins,
           color,
           dateAwarded: new Date().toISOString()
@@ -409,20 +449,27 @@ export const useTournament = create<TournamentState>()(
         import('../stores/usePlayerData').then(({ usePlayerData }) => {
           const playerDataStore = usePlayerData.getState();
           
-          // Add season reward to player data
-          const seasonReward = {
-            rank: `${playerRank} Tournament Winner`,
-            season,
-            unlocked: true
-          };
+          // Check if this season reward already exists
+          const existingRewardIndex = playerDataStore.playerData.seasonRewards.findIndex(
+            reward => reward.season === season && reward.rank === `${baseRank} Tournament Winner`
+          );
           
-          usePlayerData.setState(state => ({
-            playerData: {
-              ...state.playerData,
-              seasonRewards: [...state.playerData.seasonRewards, seasonReward],
-              unlockedTitles: [...state.playerData.unlockedTitles, titleId]
-            }
-          }));
+          if (existingRewardIndex === -1) {
+            // Add season reward to player data only if it doesn't exist
+            const seasonReward = {
+              rank: `${baseRank} Tournament Winner`,
+              season,
+              unlocked: true
+            };
+            
+            usePlayerData.setState(state => ({
+              playerData: {
+                ...state.playerData,
+                seasonRewards: [...state.playerData.seasonRewards, seasonReward],
+                unlockedTitles: [...state.playerData.unlockedTitles, titleId]
+              }
+            }));
+          }
         });
       },
 
