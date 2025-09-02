@@ -248,11 +248,34 @@ export function GameScreen() {
   }
 
   const isWin = gameState.teamScore > gameState.opponentTeamScore;
+  
+  // Get player's equipped title for display
+  const { getAvailableTitles } = usePlayerData();
+  const playerTitle = getAvailableTitles().find(t => t.id === playerData.equippedTitle)?.name;
+  
   const playerTeam = [
-    { name: playerData.username, score: gameState.playerScore, isPlayer: true },
-    ...gameState.opponents.filter(o => o.isTeammate)
+    { 
+      name: playerData.username, 
+      score: gameState.playerScore, 
+      isPlayer: true, 
+      isAI: false,
+      isTeammate: true,
+      hasForfeited: false,
+      title: playerTitle
+    },
+    ...gameState.opponents.filter(o => o.isTeammate).map(opponent => ({
+      ...opponent,
+      isPlayer: false,
+      hasForfeited: opponent.hasForfeited || false,
+      title: opponent.title
+    }))
   ];
-  const opponentTeam = gameState.opponents.filter(o => !o.isTeammate);
+  const opponentTeam = gameState.opponents.filter(o => !o.isTeammate).map(opponent => ({
+    ...opponent,
+    isPlayer: false,
+    hasForfeited: opponent.hasForfeited || false,
+    title: opponent.title
+  }));
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -359,11 +382,18 @@ export function GameScreen() {
                 <div key={index} className={`flex justify-between items-center p-2 bg-gray-700 rounded ${
                   player.hasForfeited ? 'opacity-50' : ''
                 }`}>
-                  <span className={player.isPlayer ? 'font-bold text-blue-400' : 'text-white'}>
-                    {player.name}
-                    {player.isPlayer && ' (You)'}
-                    {player.hasForfeited && ' [FORFEITED]'}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className={player.isPlayer ? 'font-bold text-blue-400' : 'text-white'}>
+                      {player.name}
+                      {player.isPlayer && ' (You)'}
+                      {player.hasForfeited && ' [FORFEITED]'}
+                    </span>
+                    {player.title && (
+                      <span className="text-xs text-gray-400">
+                        {player.title}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-white font-semibold">{player.score}</span>
                 </div>
               ))}
@@ -382,10 +412,17 @@ export function GameScreen() {
                 <div key={index} className={`flex justify-between items-center p-2 bg-gray-700 rounded ${
                   opponent.hasForfeited ? 'opacity-50' : ''
                 }`}>
-                  <span className="text-white">
-                    {opponent.name}
-                    {opponent.hasForfeited && ' [FORFEITED]'}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="text-white">
+                      {opponent.name}
+                      {opponent.hasForfeited && ' [FORFEITED]'}
+                    </span>
+                    {opponent.title && (
+                      <span className="text-xs text-gray-400">
+                        {opponent.title}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-white font-semibold">{opponent.score}</span>
                 </div>
               ))}

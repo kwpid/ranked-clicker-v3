@@ -5,7 +5,8 @@ import { getRankInfo } from '../utils/rankingSystem';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardHeader } from './ui/card';
-import { Edit2, Save, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Edit2, Save, X, Crown } from 'lucide-react';
 
 export function PlayerCard() {
   const { playerData, updateUsername, getAvailableTitles, equipTitle } = usePlayerData();
@@ -109,18 +110,66 @@ export function PlayerCard() {
                 {/* Title and Level */}
                 <div className="flex items-center gap-4 mt-1">
                   {playerData.equippedTitle && (
-                    <div className="flex items-center gap-2">
-                      <span 
-                        className="text-sm font-medium cursor-pointer hover:opacity-80"
-                        style={{ 
-                          color: getAvailableTitles().find(t => t.id === playerData.equippedTitle)?.color,
-                          textShadow: getAvailableTitles().find(t => t.id === playerData.equippedTitle)?.glow ? '0 0 8px currentColor' : 'none'
-                        }}
-                        onClick={() => setShowTitleSelector(!showTitleSelector)}
-                      >
-                        {getAvailableTitles().find(t => t.id === playerData.equippedTitle)?.name}
-                      </span>
-                    </div>
+                    <Dialog open={showTitleSelector} onOpenChange={setShowTitleSelector}>
+                      <DialogTrigger asChild>
+                        <button 
+                          className="flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border border-gray-600 hover:border-gray-500 transition-all duration-200 hover:bg-gray-700/50 cursor-pointer group"
+                          style={{ 
+                            color: getAvailableTitles().find(t => t.id === playerData.equippedTitle)?.color,
+                            textShadow: getAvailableTitles().find(t => t.id === playerData.equippedTitle)?.glow ? '0 0 8px currentColor' : 'none'
+                          }}
+                        >
+                          <Crown className="w-3 h-3 opacity-70 group-hover:opacity-100 transition-opacity" />
+                          {getAvailableTitles().find(t => t.id === playerData.equippedTitle)?.name}
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-md">
+                        <DialogHeader>
+                          <DialogTitle className="text-white flex items-center gap-2">
+                            <Crown className="w-5 h-5" />
+                            Select Title
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="grid grid-cols-1 gap-2 max-h-96 overflow-y-auto pr-2">
+                          {getAvailableTitles().map((title) => (
+                            <button
+                              key={title.id}
+                              onClick={() => {
+                                equipTitle(title.id);
+                                setShowTitleSelector(false);
+                              }}
+                              className={`p-3 rounded-lg text-left hover:bg-gray-700 transition-all duration-200 border ${
+                                playerData.equippedTitle === title.id 
+                                  ? 'bg-gray-700 border-gray-500' 
+                                  : 'bg-gray-800 border-gray-600 hover:border-gray-500'
+                              }`}
+                              style={{ 
+                                color: title.color,
+                                textShadow: title.glow ? '0 0 8px currentColor' : 'none'
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Crown className="w-4 h-4 opacity-70" />
+                                <span className="font-medium">{title.name}</span>
+                                {playerData.equippedTitle === title.id && (
+                                  <span className="ml-auto text-xs text-green-400">Equipped</span>
+                                )}
+                              </div>
+                              {title.type === 'level' && title.requirement && (
+                                <div className="text-xs text-gray-400 mt-1 ml-6">
+                                  Unlocked at Level {title.requirement}
+                                </div>
+                              )}
+                              {title.type === 'season' && (
+                                <div className="text-xs text-gray-400 mt-1 ml-6">
+                                  Season Reward
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   )}
                   <div className="text-sm text-blue-400">
                     Level {playerData.level || 1}
@@ -154,32 +203,6 @@ export function PlayerCard() {
           </div>
         </div>
         
-        {/* Title Selector Dropdown */}
-        {showTitleSelector && (
-          <div className="mt-4 p-4 bg-gray-700 rounded-lg border border-gray-600">
-            <h4 className="text-white font-medium mb-3">Select Title</h4>
-            <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
-              {getAvailableTitles().map((title) => (
-                <button
-                  key={title.id}
-                  onClick={() => {
-                    equipTitle(title.id);
-                    setShowTitleSelector(false);
-                  }}
-                  className={`p-2 rounded text-sm text-left hover:bg-gray-600 ${
-                    playerData.equippedTitle === title.id ? 'bg-gray-600' : 'bg-gray-800'
-                  }`}
-                  style={{ 
-                    color: title.color,
-                    textShadow: title.glow ? '0 0 8px currentColor' : 'none'
-                  }}
-                >
-                  {title.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-3 gap-4">

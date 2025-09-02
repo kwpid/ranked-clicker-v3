@@ -2,7 +2,7 @@ import React from 'react';
 import { useGameState } from '../stores/useGameState';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Trophy, Users, Zap } from 'lucide-react';
+import { Trophy, Users, Zap, Crown } from 'lucide-react';
 
 export function MainMenu() {
   const { setQueueMode, setCurrentScreen } = useGameState();
@@ -61,6 +61,24 @@ export function MainMenu() {
               <li>• Rank progression</li>
               <li>• Choose 1v1, 2v2, or 3v3</li>
             </ul>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Leaderboard Button */}
+      <div className="mt-6 text-center">
+        <Card className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border-yellow-600/30 hover:border-yellow-500/50 transition-all duration-300 cursor-pointer group max-w-sm mx-auto"
+              onClick={() => setCurrentScreen('leaderboard')}>
+          <CardHeader className="text-center pb-3">
+            <div className="w-12 h-12 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:from-yellow-500 group-hover:to-orange-500 transition-all shadow-lg shadow-yellow-500/25">
+              <Crown className="w-6 h-6 text-white" />
+            </div>
+            <CardTitle className="text-lg text-yellow-400">Competitive Leaderboards</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center pt-0">
+            <p className="text-gray-400 text-sm">
+              See the top 25 Grand Champions in each playlist
+            </p>
           </CardContent>
         </Card>
       </div>
