@@ -20,7 +20,7 @@ interface GameState {
 
 export function GameScreen() {
   const { gameMode, queueMode, setCurrentScreen } = useGameState();
-  const { playerData, updateMMR, updateStats } = usePlayerData();
+  const { playerData, updateMMR, updateStats, getAvailableTitles } = usePlayerData();
   
   const [gameState, setGameState] = useState<GameState>({
     phase: 'countdown',
@@ -250,7 +250,6 @@ export function GameScreen() {
   const isWin = gameState.teamScore > gameState.opponentTeamScore;
   
   // Get player's equipped title for display
-  const { getAvailableTitles } = usePlayerData();
   const playerTitle = getAvailableTitles().find(t => t.id === playerData.equippedTitle)?.name;
   
   const playerTeam = [
