@@ -21,7 +21,7 @@ interface GameState {
 }
 
 export function GameScreen() {
-  const { gameMode, queueMode, setCurrentScreen, tournamentContext, setTournamentContext } = useGameState();
+  const { gameMode, queueMode, setCurrentScreen, tournamentContext, setTournamentContext, opponents: globalOpponents } = useGameState();
   const { playerData, updateMMR, updateStats, getAvailableTitles } = usePlayerData();
   const { completeTournamentGame } = useTournament();
   
@@ -41,7 +41,7 @@ export function GameScreen() {
 
   // Initialize opponents and game only once when component mounts
   useEffect(() => {
-    console.log('👥 GameScreen opponent setup:', { gameMode, queueMode, currentOpponents: gameState.opponents });
+    console.log('👥 GameScreen opponent setup:', { gameMode, queueMode, globalOpponents, localOpponents: gameState.opponents });
     
     if (gameMode && queueMode !== 'tournament' && gameState.opponents.length === 0) {
       // Only generate AI opponents for non-tournament games
@@ -49,20 +49,20 @@ export function GameScreen() {
       const currentMMR = playerData.mmr[gameMode];
       const opponents = generateAIOpponents(gameMode, currentMMR);
       setGameState(prev => ({ ...prev, opponents }));
-    } else if (queueMode === 'tournament' && gameState.opponents.length > 0) {
-      // Convert tournament opponents to proper game format
-      console.log('🏆 Converting tournament opponents:', gameState.opponents);
-      const convertedOpponents = gameState.opponents.map(o => ({
+    } else if (queueMode === 'tournament' && globalOpponents.length > 0) {
+      // Use tournament opponents from global state
+      console.log('🏆 Using tournament opponents from global state:', globalOpponents);
+      const convertedOpponents = globalOpponents.map(o => ({
         name: o.name,
         score: 0,
         isAI: true,
         isTeammate: o.isTeammate,
-        title: 'Tournament Opponent'
+        title: o.title || 'Tournament Opponent'
       }));
       console.log('✅ Converted opponents:', convertedOpponents);
       setGameState(prev => ({ ...prev, opponents: convertedOpponents }));
     }
-  }, [gameMode, queueMode]); // Depend on both gameMode and queueMode
+  }, [gameMode, queueMode, globalOpponents]); // Depend on globalOpponents as well
 
   // Handle clicking/spacebar
   const handleClick = useCallback(() => {
