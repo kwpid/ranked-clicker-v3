@@ -194,12 +194,12 @@ export const usePlayerData = create<PlayerDataStore>()(
       },
       
       updateStats: (playlist: '1v1' | '2v2' | '3v3', isWin: boolean) => {
+        // XP calculation: 25 for win, 10 for loss
+        const xpGain = isWin ? 25 : 10;
+        
         set((state) => {
           const currentPlacement = state.playerData.placementMatches[playlist];
           const newPlacement = Math.max(0, currentPlacement - 1);
-          
-          // XP calculation: 25 for win, 10 for loss
-          const xpGain = isWin ? 25 : 10;
           
           return {
             playerData: {
