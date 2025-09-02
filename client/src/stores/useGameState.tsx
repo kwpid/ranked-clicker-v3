@@ -16,8 +16,10 @@ interface GameState {
   showStatsModal: boolean;
   opponents: Array<{
     name: string;
-    mmr: number;
+    score: number;
+    isAI: boolean;
     isTeammate: boolean;
+    title?: string;
   }>;
   tournamentContext: TournamentContext;
   
@@ -25,7 +27,7 @@ interface GameState {
   setQueueMode: (mode: 'casual' | 'ranked' | 'tournament') => void;
   setGameMode: (mode: '1v1' | '2v2' | '3v3') => void;
   setShowStatsModal: (show: boolean) => void;
-  setOpponents: (opponents: Array<{ name: string; mmr: number; isTeammate: boolean }>) => void;
+  setOpponents: (opponents: Array<{ name: string; score: number; isAI: boolean; isTeammate: boolean; title?: string }>) => void;
   setTournamentContext: (context: TournamentContext) => void;
   startTournamentMatch: (matchId: string, bestOf: number, opponents: Array<{ name: string; mmr: number; isTeammate: boolean }>) => void;
 }
@@ -53,7 +55,6 @@ export const useGameState = create<GameState>((set, get) => ({
   setTournamentContext: (context) => set({ tournamentContext: context }),
   
   startTournamentMatch: (matchId, bestOf, opponents) => {
-    console.log('🎮 startTournamentMatch called:', { matchId, bestOf, opponents });
     // Determine game mode based on total team size (player + teammates + opponents)
     // 1v1: 1 opponent, 2v2: 3 opponents (1 teammate + 2 enemies), 3v3: 5 opponents (2 teammates + 3 enemies)
     const totalOpponents = opponents.length;
@@ -67,11 +68,21 @@ export const useGameState = create<GameState>((set, get) => ({
       gameMode = '3v3';
     }
     
+    // Convert opponents to proper game format immediately
+    const gameOpponents = opponents.map(o => ({
+      name: o.name,
+      score: 0,
+      isAI: true,
+      isTeammate: o.isTeammate,
+      title: 'Tournament Opponent'
+    }));
+    
+    
     set({
       currentScreen: 'game',
       queueMode: 'tournament',
       gameMode,
-      opponents,
+      opponents: gameOpponents,
       tournamentContext: {
         isActive: true,
         matchId,
