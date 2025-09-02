@@ -395,6 +395,7 @@ export const useTournament = create<TournamentState>()(
           dateAwarded: new Date().toISOString()
         };
         
+        // Store tournament title in tournament store
         set(state => ({
           tournamentTitles: [...state.tournamentTitles, newTitle],
           seasonTournamentWins: {
@@ -402,6 +403,27 @@ export const useTournament = create<TournamentState>()(
             [seasonKey]: currentWins
           }
         }));
+        
+        // Also add the title to player data so it shows up in their title collection
+        import('../stores/usePlayerData').then(({ usePlayerData }) => {
+          const playerDataStore = usePlayerData.getState();
+          
+          // Add season reward to player data
+          const seasonReward = {
+            rank: `${playerRank} Tournament Winner`,
+            season,
+            unlocked: true
+          };
+          
+          playerDataStore.addSeasonReward?.(seasonReward) || 
+          usePlayerData.setState(state => ({
+            playerData: {
+              ...state.playerData,
+              seasonRewards: [...state.playerData.seasonRewards, seasonReward],
+              unlockedTitles: [...state.playerData.unlockedTitles, titleId]
+            }
+          }));
+        });
       },
 
       updateTournamentPhase: (phase: TournamentPhase) => {
@@ -511,10 +533,20 @@ export const useTournament = create<TournamentState>()(
         
         if (isMatchComplete) {
           // Award tournament title if player won the entire tournament
-          const currentRound = state.currentTournament.currentRound;
-          if (currentRound === 'final' && matchWinner === 'player') {
-            // Player won the tournament!
-            get().awardTournamentTitle(state.currentTournament.type, 'Grand Champion');
+          const currentRound = state.currentTournament?.currentRound;
+          if (currentRound === 'final' && matchWinner === 'player' && state.currentTournament) {
+            // Player won the tournament! Get their current rank to award proper title
+            import('../stores/usePlayerData').then(({ usePlayerData }) => {
+              const playerData = usePlayerData.getState().playerData;
+              // Get highest MMR across all playlists to determine overall rank
+              const highestMMR = Math.max(playerData.mmr['1v1'], playerData.mmr['2v2'], playerData.mmr['3v3']);
+              
+              import('../utils/rankingSystem').then(({ getRankInfo }) => {
+                const rankInfo = getRankInfo(highestMMR);
+                const baseRank = rankInfo.name.split(' ')[0]; // Get "Silver", "Gold", etc.
+                get().awardTournamentTitle(state.currentTournament.type, baseRank);
+              });
+            });
           }
           
           // Check for round completion
