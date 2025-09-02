@@ -90,7 +90,7 @@ export function LeaderboardScreen({ onBack }: LeaderboardScreenProps) {
       </div>
 
       {/* Player Status */}
-      {playerRank <= 25 ? (
+      {playerRank <= 25 && playerData.mmr[selectedPlaylist] >= 2550 ? (
         <Card className="mb-6 bg-gradient-to-r from-blue-900/50 to-blue-800/50 border-blue-500/50">
           <CardContent className="py-4">
             <div className="flex items-center justify-between">
@@ -103,10 +103,6 @@ export function LeaderboardScreen({ onBack }: LeaderboardScreenProps) {
                   </div>
                 </div>
               </div>
-              <div className="text-right text-sm text-gray-300">
-                <div>{formatWinRate(playerData.stats[selectedPlaylist].wins, playerData.stats[selectedPlaylist].losses)} Win Rate</div>
-                <div>{playerData.stats[selectedPlaylist].wins}W - {playerData.stats[selectedPlaylist].losses}L</div>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -114,7 +110,7 @@ export function LeaderboardScreen({ onBack }: LeaderboardScreenProps) {
         <Card className="mb-6 bg-gray-800/50 border-gray-600">
           <CardContent className="py-4">
             <div className="text-center text-gray-400">
-              <div className="text-lg">You need {Math.max(...currentLeaderboard.map(p => p.mmr)) - playerData.mmr[selectedPlaylist] + 1} more MMR to reach the leaderboard</div>
+              <div className="text-lg">You need {Math.max(2550, Math.max(...(currentLeaderboard.length > 0 ? currentLeaderboard.map(p => p.mmr) : [2550])) - playerData.mmr[selectedPlaylist] + 1)} more MMR to reach the leaderboard</div>
               <div className="text-sm">Current: {playerData.mmr[selectedPlaylist]} MMR • {getRankInfo(playerData.mmr[selectedPlaylist]).name}</div>
             </div>
           </CardContent>
@@ -159,22 +155,11 @@ export function LeaderboardScreen({ onBack }: LeaderboardScreenProps) {
                           {player.name}
                           {player.isPlayer && ' (You)'}
                         </span>
-                        {title && (
-                          <span className="text-xs px-2 py-1 rounded-full bg-gray-600 text-gray-300">
-                            {title}
-                          </span>
-                        )}
                       </div>
                       
                       <div className="flex items-center gap-4 text-sm text-gray-400">
                         <span style={{ color: rankInfo.color }}>
                           {rankInfo.name}
-                        </span>
-                        <span>
-                          {formatWinRate(player.wins, player.losses)} WR
-                        </span>
-                        <span>
-                          {player.wins}W - {player.losses}L
                         </span>
                       </div>
                     </div>
