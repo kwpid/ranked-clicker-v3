@@ -75,6 +75,7 @@ interface TournamentState {
   updateTournamentPhase: (phase: TournamentPhase) => void;
   isGameModeBlocked: () => boolean;
   playTournamentMatch: (matchId: string) => void;
+  completeTournamentGame: (matchId: string, playerWon: boolean, playerScore: number, opponentScores: { [id: string]: number }) => void;
 }
 
 export const useTournament = create<TournamentState>()(
@@ -424,26 +425,93 @@ export const useTournament = create<TournamentState>()(
         const match = state.currentTournament.matches.find(m => m.id === matchId);
         if (!match || match.isComplete || !match.players.some(p => p.isPlayer)) return;
         
-        // This would normally trigger the game screen with tournament context
-        // For now, let's simulate the player match
+        // Convert tournament players to game opponents format
+        const gameMode = state.currentTournament.type;
+        let opponents: Array<{ name: string; mmr: number; isTeammate: boolean }> = [];
+        
+        if (gameMode === '1v1') {
+          // 1v1: just the opponent
+          const opponent = match.players.find(p => !p.isPlayer)!;
+          opponents = [{ name: opponent.name, mmr: opponent.mmr, isTeammate: false }];
+        } else if (gameMode === '2v2') {
+          // 2v2: player + AI teammate vs 2 AI opponents
+          const opponentTeam = match.players.filter(p => !p.isPlayer);
+          opponents = [
+            { name: 'Teammate AI', mmr: 2500, isTeammate: true },
+            ...opponentTeam.map(p => ({ name: p.name, mmr: p.mmr, isTeammate: false }))
+          ];
+        } else if (gameMode === '3v3') {
+          // 3v3: player + 2 AI teammates vs 3 AI opponents  
+          const opponentTeam = match.players.filter(p => !p.isPlayer);
+          opponents = [
+            { name: 'Teammate AI 1', mmr: 2500, isTeammate: true },
+            { name: 'Teammate AI 2', mmr: 2500, isTeammate: true },
+            ...opponentTeam.map(p => ({ name: p.name, mmr: p.mmr, isTeammate: false }))
+          ];
+        }
+        
+        // Import the game state store
+        import('../stores/useGameState').then(({ useGameState }) => {
+          useGameState.getState().startTournamentMatch(matchId, match.bestOf, opponents);
+        });
+      },
+
+      completeTournamentGame: (matchId: string, playerWon: boolean, playerScore: number, opponentScores: { [id: string]: number }) => {
+        const state = get();
+        if (!state.currentTournament) return;
+        
+        const match = state.currentTournament.matches.find(m => m.id === matchId);
+        if (!match) return;
+        
         const opponent = match.players.find(p => !p.isPlayer)!;
-        const playerWins = Math.random() < 0.7; // 70% chance player wins
+        const gameNumber = match.games.length + 1;
         
         const gameResult = {
-          gameNumber: 1,
-          winner: playerWins ? 'player' : opponent.id,
+          gameNumber,
+          winner: playerWon ? 'player' : opponent.id,
           scores: {
-            'player': Math.floor(Math.random() * 30) + (playerWins ? 50 : 30),
-            [opponent.id]: Math.floor(Math.random() * 30) + (playerWins ? 30 : 50)
+            'player': playerScore,
+            [opponent.id]: opponentScores[opponent.id] || 0
           }
         };
         
-        get().completeMatch(matchId, gameResult.winner, [gameResult]);
+        const updatedGames = [...match.games, gameResult];
+        const gamesNeededToWin = Math.ceil(match.bestOf / 2);
         
-        // Check for round completion
-        setTimeout(() => {
-          get().checkRoundCompletion();
-        }, 1000);
+        // Count wins for each player
+        const playerWins = updatedGames.filter(g => g.winner === 'player').length;
+        const opponentWins = updatedGames.filter(g => g.winner === opponent.id).length;
+        
+        // Check if match is complete
+        const isMatchComplete = playerWins >= gamesNeededToWin || opponentWins >= gamesNeededToWin;
+        const matchWinner = isMatchComplete ? (playerWins > opponentWins ? 'player' : opponent.id) : null;
+        
+        // Update the match
+        const updatedMatches = state.currentTournament.matches.map(m => {
+          if (m.id === matchId) {
+            return {
+              ...m,
+              games: updatedGames,
+              isComplete: isMatchComplete,
+              winner: matchWinner
+            };
+          }
+          return m;
+        });
+        
+        set(state => ({
+          currentTournament: state.currentTournament ? {
+            ...state.currentTournament,
+            matches: updatedMatches
+          } : null
+        }));
+        
+        if (isMatchComplete) {
+          // Check for round completion
+          setTimeout(() => {
+            get().checkRoundCompletion();
+          }, 1000);
+        }
       }
     }),
     {

@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useGameState } from '../stores/useGameState';
 import { usePlayerData } from '../stores/usePlayerData';
+import { useTournament } from '../stores/useTournament';
 import { generateAIOpponents, simulateAIClicks } from '../utils/aiOpponents';
 import { calculateMMRChange } from '../utils/rankingSystem';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { ArrowLeft, Users, Clock, Zap } from 'lucide-react';
+import { Badge } from './ui/badge';
+import { ArrowLeft, Users, Clock, Zap, Trophy } from 'lucide-react';
 
 interface GameState {
   phase: 'countdown' | 'playing' | 'finished';
@@ -19,8 +21,9 @@ interface GameState {
 }
 
 export function GameScreen() {
-  const { gameMode, queueMode, setCurrentScreen } = useGameState();
+  const { gameMode, queueMode, setCurrentScreen, tournamentContext, setTournamentContext } = useGameState();
   const { playerData, updateMMR, updateStats, getAvailableTitles } = usePlayerData();
+  const { completeTournamentGame } = useTournament();
   
   const [gameState, setGameState] = useState<GameState>({
     phase: 'countdown',
@@ -205,19 +208,80 @@ export function GameScreen() {
     if (gameState.phase === 'finished') {
       const isWin = gameState.teamScore > gameState.opponentTeamScore;
       
-      if (queueMode === 'ranked') {
-        const currentMMR = playerData.mmr[gameMode!];
-        const mmrChange = calculateMMRChange(
-          currentMMR,
+      if (queueMode === 'tournament' && tournamentContext.isActive) {
+        // Handle tournament game completion
+        const opponentScores: { [id: string]: number } = {};
+        gameState.opponents.forEach(opponent => {
+          if (!opponent.isTeammate) {
+            opponentScores[opponent.name] = opponent.score;
+          }
+        });
+        
+        completeTournamentGame(
+          tournamentContext.matchId!,
           isWin,
-          gameState.opponents.filter(o => !o.isTeammate).map(() => currentMMR)
+          gameState.playerScore,
+          opponentScores
         );
-        updateMMR(gameMode!, mmrChange);
+        
+        // Update tournament context for next game
+        const newGamesWon = isWin ? tournamentContext.gamesWon + 1 : tournamentContext.gamesWon;
+        const newGamesLost = !isWin ? tournamentContext.gamesLost + 1 : tournamentContext.gamesLost;
+        const gamesNeededToWin = Math.ceil(tournamentContext.bestOf / 2);
+        
+        if (newGamesWon >= gamesNeededToWin || newGamesLost >= gamesNeededToWin) {
+          // Match is complete, return to bracket
+          setTournamentContext({
+            isActive: false,
+            matchId: null,
+            currentGame: 1,
+            bestOf: 1,
+            gamesWon: 0,
+            gamesLost: 0
+          });
+          setTimeout(() => {
+            setCurrentScreen('tournament-bracket');
+          }, 3000);
+        } else {
+          // Continue to next game in the match
+          setTournamentContext({
+            ...tournamentContext,
+            currentGame: tournamentContext.currentGame + 1,
+            gamesWon: newGamesWon,
+            gamesLost: newGamesLost
+          });
+          
+          // Reset game state for next game
+          setTimeout(() => {
+            setGameState({
+              phase: 'countdown',
+              timeLeft: 3,
+              playerScore: 0,
+              teamScore: 0,
+              opponentTeamScore: 0,
+              opponents: gameState.opponents.map(o => ({ ...o, score: 0, hasForfeited: false })),
+              dontClickMode: false,
+              dontClickStartTime: 0
+            });
+            setCountdownTime(3);
+            setGameTime(60);
+          }, 3000);
+        }
+      } else {
+        // Regular game (casual/ranked)
+        if (queueMode === 'ranked') {
+          const currentMMR = playerData.mmr[gameMode!];
+          const mmrChange = calculateMMRChange(
+            currentMMR,
+            isWin,
+            gameState.opponents.filter(o => !o.isTeammate).map(() => currentMMR)
+          );
+          updateMMR(gameMode!, mmrChange);
+        }
+        updateStats(gameMode!, isWin);
       }
-
-      updateStats(gameMode!, isWin);
     }
-  }, [gameState.phase, gameState.teamScore, gameState.opponentTeamScore, queueMode, gameMode, updateMMR, updateStats]);
+  }, [gameState.phase, gameState.teamScore, gameState.opponentTeamScore, queueMode, gameMode, updateMMR, updateStats, tournamentContext, completeTournamentGame, setTournamentContext, setCurrentScreen]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -226,7 +290,17 @@ export function GameScreen() {
   };
 
   const handleReturnToMenu = () => {
-    setCurrentScreen('main');
+    if (tournamentContext.isActive) {
+      setCurrentScreen('tournament-bracket');
+    } else {
+      setCurrentScreen('main');
+    }
+  };
+
+  const getTournamentStatusText = () => {
+    if (!tournamentContext.isActive) return '';
+    const gamesNeededToWin = Math.ceil(tournamentContext.bestOf / 2);
+    return `Game ${tournamentContext.currentGame} of ${tournamentContext.bestOf} | Win ${gamesNeededToWin} to advance | Won: ${tournamentContext.gamesWon} Lost: ${tournamentContext.gamesLost}`;
   };
 
   if (gameState.phase === 'countdown') {
@@ -239,7 +313,12 @@ export function GameScreen() {
             </div>
             <div className="text-xl text-gray-400">Get ready to click!</div>
             <div className="text-sm text-gray-500 mt-4">
-              {queueMode === 'ranked' ? 'Ranked' : 'Casual'} {gameMode}
+              {queueMode === 'tournament' ? 'Tournament' : queueMode === 'ranked' ? 'Ranked' : 'Casual'} {gameMode}
+              {tournamentContext.isActive && (
+                <div className="text-xs text-yellow-400 mt-1">
+                  {getTournamentStatusText()}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
