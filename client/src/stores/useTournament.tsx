@@ -122,6 +122,11 @@ export const useTournament = create<TournamentState>()(
         if (now >= state.nextTournamentTime && state.queuedTournamentType) {
           // Start the tournament
           state.startTournamentForTesting(state.queuedTournamentType);
+          
+          // Navigate to bracket screen for regular tournaments too
+          import('../stores/useGameState').then(({ useGameState }) => {
+            useGameState.getState().setCurrentScreen('tournament-bracket');
+          });
         }
       },
 
@@ -374,15 +379,15 @@ export const useTournament = create<TournamentState>()(
         const season = state.currentSeason;
         const baseRank = playerRank.split(' ')[0]; // Get "Silver", "Gold", etc.
         
-        // Count current season wins for this tournament type + rank
-        const seasonKey = `s${season}-${tournamentType}-${baseRank}`;
+        // Count current season wins for this tournament type (not per rank)
+        const seasonKey = `s${season}-${tournamentType}`;
         const currentWins = (state.seasonTournamentWins[seasonKey] || 0) + 1;
         
-        // Check if this exact title already exists for this season
+        // Check if this exact title already exists for this season and tournament type
         const existingTitleIndex = state.tournamentTitles.findIndex(
           title => title.season === season && 
                    title.rank === baseRank && 
-                   title.name.includes(tournamentType.toUpperCase())
+                   title.name.includes(`${season} ${baseRank.toUpperCase()} TOURNAMENT WINNER`)
         );
         
         if (existingTitleIndex !== -1) {
@@ -596,7 +601,7 @@ export const useTournament = create<TournamentState>()(
               
               import('../utils/rankingSystem').then(({ getRankInfo }) => {
                 const rankInfo = getRankInfo(highestMMR);
-                const baseRank = rankInfo.name.split(' ')[0]; // Get "Silver", "Gold", etc.
+                const baseRank = rankInfo.name.includes('Grand Champion') ? 'Grand Champion' : rankInfo.name.split(' ')[0];
                 
                 console.log('Rank Detection:', {
                   rankInfo,
