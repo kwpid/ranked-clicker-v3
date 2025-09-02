@@ -6,6 +6,7 @@ import { GameScreen } from './GameScreen';
 import { StatsScreen } from './StatsScreen';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { TournamentScreen } from './TournamentScreen';
+import { TournamentBracket } from './TournamentBracket';
 import { TournamentBanner } from './TournamentBanner';
 import { useGameState } from '../stores/useGameState';
 
@@ -25,7 +26,7 @@ export function GameLayout() {
       case 'tournaments':
         return <TournamentScreen />;
       case 'tournament-bracket':
-        return <div className="text-center text-white">Tournament Bracket (Coming Soon)</div>;
+        return <TournamentBracket />;
       default:
         return <MainMenu />;
     }

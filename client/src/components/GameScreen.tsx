@@ -266,14 +266,14 @@ export function GameScreen() {
       ...opponent,
       isPlayer: false,
       hasForfeited: opponent.hasForfeited || false,
-      title: opponent.title
+      title: undefined
     }))
   ];
   const opponentTeam = gameState.opponents.filter(o => !o.isTeammate).map(opponent => ({
     ...opponent,
     isPlayer: false,
     hasForfeited: opponent.hasForfeited || false,
-    title: opponent.title
+    title: undefined
   }));
 
   return (

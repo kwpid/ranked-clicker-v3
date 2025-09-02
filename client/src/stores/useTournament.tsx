@@ -63,14 +63,18 @@ interface TournamentState {
   
   // Actions
   calculateNextTournamentTime: () => void;
+  checkAndStartTournament: () => void;
   joinTournamentQueue: (type: TournamentType) => void;
   leaveTournamentQueue: () => void;
   startTournamentForTesting: (type: TournamentType) => void;
   generateTournamentBracket: (players: TournamentPlayer[], type: TournamentType) => void;
+  simulateAIMatches: () => void;
+  checkRoundCompletion: () => void;
   completeMatch: (matchId: string, winner: string, gameResults: any[]) => void;
   awardTournamentTitle: (tournamentType: TournamentType, playerRank: string) => void;
   updateTournamentPhase: (phase: TournamentPhase) => void;
   isGameModeBlocked: () => boolean;
+  playTournamentMatch: (matchId: string) => void;
 }
 
 export const useTournament = create<TournamentState>()(
@@ -104,6 +108,20 @@ export const useTournament = create<TournamentState>()(
         }
         
         set({ nextTournamentTime: nextTournamentTime.getTime() });
+        
+        // Check if current tournament should start
+        get().checkAndStartTournament();
+      },
+
+      checkAndStartTournament: () => {
+        const state = get();
+        if (!state.isQueued || !state.nextTournamentTime) return;
+        
+        const now = Date.now();
+        if (now >= state.nextTournamentTime && state.queuedTournamentType) {
+          // Start the tournament
+          state.startTournamentForTesting(state.queuedTournamentType);
+        }
       },
 
       joinTournamentQueue: (type: TournamentType) => {
@@ -204,6 +222,126 @@ export const useTournament = create<TournamentState>()(
             matches
           } : null
         }));
+        
+        // Auto-simulate AI matches after a short delay
+        setTimeout(() => {
+          get().simulateAIMatches();
+        }, 2000);
+      },
+
+      simulateAIMatches: () => {
+        const state = get();
+        if (!state.currentTournament) return;
+        
+        const updatedMatches = state.currentTournament.matches.map(match => {
+          if (!match.isComplete && !match.players.some(p => p.isPlayer)) {
+            // AI vs AI match - simulate result
+            const winner = Math.random() < 0.5 ? match.players[0] : match.players[1];
+            const gameResult = {
+              gameNumber: 1,
+              winner: winner.id,
+              scores: {
+                [match.players[0].id]: Math.floor(Math.random() * 50) + 30,
+                [match.players[1].id]: Math.floor(Math.random() * 50) + 30
+              }
+            };
+            
+            return {
+              ...match,
+              isComplete: true,
+              winner: winner.id,
+              games: [gameResult]
+            };
+          }
+          return match;
+        });
+        
+        set(state => ({
+          currentTournament: state.currentTournament ? {
+            ...state.currentTournament,
+            matches: updatedMatches
+          } : null
+        }));
+        
+        // Check if we need to advance to next round
+        setTimeout(() => {
+          get().checkRoundCompletion();
+        }, 1000);
+      },
+
+      checkRoundCompletion: () => {
+        const state = get();
+        if (!state.currentTournament) return;
+        
+        const currentRoundMatches = state.currentTournament.matches.filter(
+          m => m.round === state.currentTournament?.currentRound
+        );
+        
+        const allComplete = currentRoundMatches.every(m => m.isComplete);
+        if (!allComplete) return;
+        
+        // Advance to next round
+        const winners = currentRoundMatches.map(match => {
+          const winnerId = match.winner;
+          return match.players.find(p => p.id === winnerId)!;
+        });
+        
+        if (winners.length === 1) {
+          // Tournament finished
+          const winner = winners[0];
+          if (winner.isPlayer) {
+            // Player won the tournament!
+            get().awardTournamentTitle(state.currentTournament.type, 'Grand Champion');
+          }
+          
+          set(state => ({
+            currentTournament: state.currentTournament ? {
+              ...state.currentTournament,
+              phase: 'finished' as TournamentPhase
+            } : null
+          }));
+          return;
+        }
+        
+        // Create next round
+        const nextRoundMap: { [key: string]: BracketRound } = {
+          'round1': 'round2',
+          'round2': 'round3', 
+          'round3': 'semifinal',
+          'semifinal': 'final'
+        };
+        
+        const nextRound = nextRoundMap[state.currentTournament.currentRound];
+        if (!nextRound) return;
+        
+        const nextMatches: TournamentMatch[] = [];
+        for (let i = 0; i < winners.length; i += 2) {
+          if (i + 1 < winners.length) {
+            const bestOf = nextRound === 'semifinal' ? 3 : nextRound === 'final' ? 5 : 1;
+            nextMatches.push({
+              id: `${nextRound}-${i / 2}`,
+              round: nextRound,
+              players: [winners[i], winners[i + 1]],
+              games: [],
+              isComplete: false,
+              winner: null,
+              bestOf
+            });
+          }
+        }
+        
+        set(state => ({
+          currentTournament: state.currentTournament ? {
+            ...state.currentTournament,
+            currentRound: nextRound,
+            matches: [...state.currentTournament.matches, ...nextMatches]
+          } : null
+        }));
+        
+        // Auto-simulate AI matches in next round
+        setTimeout(() => {
+          get().simulateAIMatches();
+        }, 3000);
       },
 
       completeMatch: (matchId: string, winner: string, gameResults: any[]) => {
@@ -277,6 +415,35 @@ export const useTournament = create<TournamentState>()(
       isGameModeBlocked: () => {
         const state = get();
         return state.isQueued || (state.currentTournament?.phase === 'in-progress');
+      },
+
+      playTournamentMatch: (matchId: string) => {
+        const state = get();
+        if (!state.currentTournament) return;
+        
+        const match = state.currentTournament.matches.find(m => m.id === matchId);
+        if (!match || match.isComplete || !match.players.some(p => p.isPlayer)) return;
+        
+        // This would normally trigger the game screen with tournament context
+        // For now, let's simulate the player match
+        const opponent = match.players.find(p => !p.isPlayer)!;
+        const playerWins = Math.random() < 0.7; // 70% chance player wins
+        
+        const gameResult = {
+          gameNumber: 1,
+          winner: playerWins ? 'player' : opponent.id,
+          scores: {
+            'player': Math.floor(Math.random() * 30) + (playerWins ? 50 : 30),
+            [opponent.id]: Math.floor(Math.random() * 30) + (playerWins ? 30 : 50)
+          }
+        };
+        
+        get().completeMatch(matchId, gameResult.winner, [gameResult]);
+        
+        // Check for round completion
+        setTimeout(() => {
+          get().checkRoundCompletion();
+        }, 1000);
       }
     }),
     {
@@ -294,3 +461,8 @@ setTimeout(() => {
 setInterval(() => {
   useTournament.getState().calculateNextTournamentTime();
 }, 60000);
+
+// Check for tournament starts every 5 seconds
+setInterval(() => {
+  useTournament.getState().checkAndStartTournament();
+}, 5000);
