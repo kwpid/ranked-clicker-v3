@@ -95,14 +95,14 @@ const getRankColor = (rank: string): string => {
 // Title definitions
 const ALL_TITLES: Title[] = [
   // Level-based titles (gray)
-  { id: 'rookie', name: 'Rookie', color: '#9CA3AF', type: 'level', requirement: 1 },
-  { id: 'novice', name: 'Novice', color: '#9CA3AF', type: 'level', requirement: 5 },
-  { id: 'apprentice', name: 'Apprentice', color: '#9CA3AF', type: 'level', requirement: 10 },
-  { id: 'journeyman', name: 'Journeyman', color: '#9CA3AF', type: 'level', requirement: 20 },
-  { id: 'expert', name: 'Expert', color: '#9CA3AF', type: 'level', requirement: 35 },
-  { id: 'master', name: 'Master', color: '#9CA3AF', type: 'level', requirement: 50 },
-  { id: 'grandmaster', name: 'Grandmaster', color: '#9CA3AF', type: 'level', requirement: 75 },
-  { id: 'legend', name: 'Legend', color: '#9CA3AF', type: 'level', requirement: 100 },
+  { id: 'rookie', name: 'ROOKIE', color: '#9CA3AF', type: 'level', requirement: 1 },
+  { id: 'novice', name: 'NOVICE', color: '#9CA3AF', type: 'level', requirement: 5 },
+  { id: 'apprentice', name: 'APPRENTICE', color: '#9CA3AF', type: 'level', requirement: 10 },
+  { id: 'journeyman', name: 'JOURNEYMAN', color: '#9CA3AF', type: 'level', requirement: 20 },
+  { id: 'expert', name: 'EXPERT', color: '#9CA3AF', type: 'level', requirement: 35 },
+  { id: 'master', name: 'MASTER', color: '#9CA3AF', type: 'level', requirement: 50 },
+  { id: 'grandmaster', name: 'GRANDMASTER', color: '#9CA3AF', type: 'level', requirement: 75 },
+  { id: 'legend', name: 'LEGEND', color: '#9CA3AF', type: 'level', requirement: 100 },
 ];
 
 const defaultPlayerData: PlayerData = {
@@ -308,7 +308,7 @@ export const usePlayerData = create<PlayerDataStore>()(
             .filter(reward => reward.unlocked)
             .map(reward => ({
               id: `s${reward.season}-${reward.rank}`,
-              name: `S${reward.season} ${reward.rank}`,
+              name: `S${reward.season} ${reward.rank.toUpperCase()}`,
               color: reward.rank.includes('Grand Champion') ? '#FFD700' : getRankColor(reward.rank.split(' ')[0]),
               glow: reward.rank.includes('Grand Champion'),
               type: 'season' as const,
@@ -321,33 +321,34 @@ export const usePlayerData = create<PlayerDataStore>()(
           const { playerData } = state;
           const newRewards = [...playerData.seasonRewards];
           
-          // Check each playlist for season reward eligibility
-          (['1v1', '2v2', '3v3'] as const).forEach(playlist => {
-            const currentRank = getRankFromMMR(playerData.mmr[playlist]);
-            const seasonWins = playerData.seasonWins[playlist];
-            const rankOrder = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Champion', 'Grand Champion'];
-            const currentRankIndex = rankOrder.indexOf(currentRank);
+          // Calculate total season wins across all playlists
+          const totalSeasonWins = playerData.seasonWins['1v1'] + playerData.seasonWins['2v2'] + playerData.seasonWins['3v3'];
+          
+          // Get highest rank across all playlists
+          const highestMMR = Math.max(playerData.mmr['1v1'], playerData.mmr['2v2'], playerData.mmr['3v3']);
+          const highestRank = getRankFromMMR(highestMMR);
+          const rankOrder = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Champion', 'Grand Champion'];
+          const highestRankIndex = rankOrder.indexOf(highestRank);
+          
+          // Check rewards for each rank up to highest rank (based on combined wins)
+          for (let i = 0; i <= highestRankIndex; i++) {
+            const rewardRank = rankOrder[i];
+            const winsNeeded = (i + 1) * 10; // 10, 20, 30, 40, 50, 60, 70
             
-            // Check rewards for each rank up to current rank
-            for (let i = 0; i <= currentRankIndex; i++) {
-              const rewardRank = rankOrder[i];
-              const winsNeeded = (i + 1) * 10; // 10, 20, 30, 40, 50, 60, 70
-              
-              const existingReward = newRewards.find(r => 
-                r.rank === rewardRank && r.season === playerData.currentSeason
-              );
-              
-              if (!existingReward) {
-                newRewards.push({
-                  rank: rewardRank,
-                  season: playerData.currentSeason,
-                  unlocked: seasonWins >= winsNeeded,
-                });
-              } else if (!existingReward.unlocked && seasonWins >= winsNeeded) {
-                existingReward.unlocked = true;
-              }
+            const existingReward = newRewards.find(r => 
+              r.rank === rewardRank && r.season === playerData.currentSeason
+            );
+            
+            if (!existingReward) {
+              newRewards.push({
+                rank: rewardRank,
+                season: playerData.currentSeason,
+                unlocked: totalSeasonWins >= winsNeeded,
+              });
+            } else if (!existingReward.unlocked && totalSeasonWins >= winsNeeded) {
+              existingReward.unlocked = true;
             }
-          });
+          }
           
           return {
             playerData: {

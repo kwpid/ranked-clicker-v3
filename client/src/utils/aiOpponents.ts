@@ -27,7 +27,7 @@ export function generateAIOpponents(gameMode: '1v1' | '2v2' | '3v3', playerMMR: 
       score: 0,
       isAI: true,
       isTeammate: true,
-      title: getRandomAITitle(),
+      title: getRandomAITitle(teammateMMR),
     });
   }
   
@@ -39,7 +39,7 @@ export function generateAIOpponents(gameMode: '1v1' | '2v2' | '3v3', playerMMR: 
       score: 0,
       isAI: true,
       isTeammate: false,
-      title: getRandomAITitle(),
+      title: getRandomAITitle(enemyMMR),
     });
   }
   
@@ -58,11 +58,60 @@ function getRandomAIName(existingOpponents: AIOpponent[]): string {
   return availableNames[Math.floor(Math.random() * availableNames.length)];
 }
 
-function getRandomAITitle(): string {
-  const AI_TITLES = [
-    'Rookie', 'Novice', 'Apprentice', 'Journeyman', 'Expert', 'Master', 'Grandmaster', 'Legend'
+function getRandomAITitle(aiMMR: number): string {
+  const currentSeason = 1; // You can get this from game state if needed
+  
+  // Get AI's rank based on MMR
+  const getRankFromMMR = (mmr: number): string => {
+    if (mmr < 400) return 'Bronze';
+    if (mmr < 700) return 'Silver';
+    if (mmr < 1000) return 'Gold';
+    if (mmr < 1300) return 'Platinum';
+    if (mmr < 1600) return 'Diamond';
+    if (mmr < 1900) return 'Champion';
+    return 'Grand Champion';
+  };
+  
+  const aiRank = getRankFromMMR(aiMMR);
+  const rankOrder = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Champion', 'Grand Champion'];
+  const aiRankIndex = rankOrder.indexOf(aiRank);
+  
+  // Level-based titles (always available)
+  const LEVEL_TITLES = [
+    'ROOKIE', 'NOVICE', 'APPRENTICE', 'JOURNEYMAN', 'EXPERT', 'MASTER', 'GRANDMASTER', 'LEGEND'
   ];
-  return AI_TITLES[Math.floor(Math.random() * AI_TITLES.length)];
+  
+  // Possible season reward titles (limited by rank)
+  const SEASON_TITLES: string[] = [];
+  for (let i = 0; i <= aiRankIndex; i++) {
+    const rank = rankOrder[i];
+    // Random past seasons (1 to current season)
+    const randomSeason = Math.floor(Math.random() * currentSeason) + 1;
+    SEASON_TITLES.push(`S${randomSeason} ${rank.toUpperCase()}`);
+  }
+  
+  // Tournament titles (limited by rank)
+  const TOURNAMENT_TITLES: string[] = [];
+  for (let i = 0; i <= aiRankIndex; i++) {
+    const rank = rankOrder[i];
+    // Random past seasons for tournament titles
+    const randomSeason = Math.floor(Math.random() * currentSeason) + 1;
+    TOURNAMENT_TITLES.push(`S${randomSeason} ${rank.toUpperCase()} TOURNAMENT WINNER`);
+  }
+  
+  // Combine all possible titles
+  const allPossibleTitles = [
+    ...LEVEL_TITLES,
+    ...SEASON_TITLES,
+    ...TOURNAMENT_TITLES
+  ];
+  
+  // 30% chance for no title, 70% chance for a title
+  if (Math.random() < 0.3) {
+    return '';
+  }
+  
+  return allPossibleTitles[Math.floor(Math.random() * allPossibleTitles.length)];
 }
 
 function generateOpponentMMR(playerMMR: number, isTeammate: boolean): number {
