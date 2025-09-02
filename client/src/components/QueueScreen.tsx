@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useGameState } from '../stores/useGameState';
 import { usePlayerData } from '../stores/usePlayerData';
 import { getOnlinePlayerCount, estimateQueueTime } from '../utils/gameLogic';
+import { getRankInfo } from '../utils/rankingSystem';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { ArrowLeft, Users, Clock, Loader2 } from 'lucide-react';
+import { ArrowLeft, Users, Clock, Loader2, Trophy, Star } from 'lucide-react';
 
 export function QueueScreen() {
   const { queueMode, setCurrentScreen, setGameMode, setOpponents } = useGameState();
@@ -154,10 +155,48 @@ export function QueueScreen() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-center space-y-3">
-                <div>
-                  <div className="text-sm text-gray-400">Your MMR</div>
-                  <div className="text-lg font-semibold text-white">{mmr}</div>
-                </div>
+                {(() => {
+                  const rankInfo = getRankInfo(mmr);
+                  const seasonWins = playerData.seasonWins?.[playlist] || 0;
+                  const totalSeasonWins = playerData.seasonWins['1v1'] + playerData.seasonWins['2v2'] + playerData.seasonWins['3v3'];
+                  const baseRank = rankInfo.name.split(' ')[0];
+                  const rankOrder = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Champion', 'Grand Champion'];
+                  const currentRankIndex = rankOrder.indexOf(baseRank);
+                  const nextRewardWins = currentRankIndex >= 0 ? (currentRankIndex + 1) * 10 : 10;
+                  
+                  return (
+                    <>
+                      {/* Rank Info */}
+                      <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-600">
+                        <div className="font-bold text-lg mb-1" style={{ color: rankInfo.color }}>
+                          {rankInfo.name}
+                        </div>
+                        {rankInfo.division && (
+                          <div className="text-sm text-gray-300 mb-1">Division {rankInfo.division}</div>
+                        )}
+                        <div className="text-sm text-gray-400">{mmr} MMR</div>
+                      </div>
+                      
+                      {/* Season Progress */}
+                      <div className="bg-gray-900/30 rounded-lg p-2 border border-gray-700">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          <Star className="w-3 h-3 text-yellow-500" />
+                          <span className="text-xs text-gray-400">Season Progress</span>
+                        </div>
+                        <div className="text-sm text-white">
+                          {totalSeasonWins} total wins
+                        </div>
+                        {currentRankIndex >= 0 && (
+                          <div className="text-xs text-orange-400 mt-1">
+                            {totalSeasonWins >= nextRewardWins 
+                              ? `${baseRank} Reward Unlocked!` 
+                              : `${nextRewardWins - totalSeasonWins} wins to ${baseRank} reward`}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
                 
                 <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
                   <Clock className="w-4 h-4" />
