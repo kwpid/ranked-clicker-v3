@@ -34,9 +34,11 @@ export function GameScreen() {
 
   // Initialize opponents and game
   useEffect(() => {
-    const opponents = generateAIOpponents(gameMode!, playerData.mmr[gameMode!]);
-    setGameState(prev => ({ ...prev, opponents }));
-  }, [gameMode, playerData.mmr]);
+    if (gameMode) {
+      const opponents = generateAIOpponents(gameMode, playerData.mmr[gameMode]);
+      setGameState(prev => ({ ...prev, opponents }));
+    }
+  }, [gameMode, playerData.mmr[gameMode!]]);
 
   // Handle clicking/spacebar
   const handleClick = useCallback(() => {

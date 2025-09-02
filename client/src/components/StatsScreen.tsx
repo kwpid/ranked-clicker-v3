@@ -4,10 +4,11 @@ import { usePlayerData } from '../stores/usePlayerData';
 import { getRankInfo } from '../utils/rankingSystem';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { ArrowLeft, Trophy, Target, TrendingUp, Calendar } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { X, Trophy, Target, TrendingUp, Calendar } from 'lucide-react';
 
 export function StatsScreen() {
-  const { setCurrentScreen } = useGameState();
+  const { showStatsModal, setShowStatsModal } = useGameState();
   const { playerData } = usePlayerData();
 
   const calculateWinRate = (wins: number, losses: number) => {
@@ -88,18 +89,22 @@ export function StatsScreen() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="flex items-center gap-4 mb-6">
-        <Button
-          onClick={() => setCurrentScreen('main')}
-          variant="ghost"
-          className="text-gray-400 hover:text-white"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-        <h2 className="text-3xl font-bold text-white">Player Statistics</h2>
-      </div>
+    <Dialog open={showStatsModal} onOpenChange={setShowStatsModal}>
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-700">
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-3xl font-bold text-white">Player Statistics</DialogTitle>
+            <Button
+              onClick={() => setShowStatsModal(false)}
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </DialogHeader>
+        <div className="mt-4">
 
       {/* Overview Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -228,6 +233,8 @@ export function StatsScreen() {
           </div>
         </CardContent>
       </Card>
-    </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

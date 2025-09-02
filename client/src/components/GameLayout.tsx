@@ -7,7 +7,7 @@ import { StatsScreen } from './StatsScreen';
 import { useGameState } from '../stores/useGameState';
 
 export function GameLayout() {
-  const { currentScreen } = useGameState();
+  const { currentScreen, showStatsModal } = useGameState();
 
   const renderScreen = () => {
     switch (currentScreen) {
@@ -17,8 +17,6 @@ export function GameLayout() {
         return <QueueScreen />;
       case 'game':
         return <GameScreen />;
-      case 'stats':
-        return <StatsScreen />;
       default:
         return <MainMenu />;
     }
@@ -27,11 +25,12 @@ export function GameLayout() {
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <div className="container mx-auto px-4 py-6">
-        <PlayerCard />
-        <div className="mt-6">
+        {currentScreen !== 'queue' && currentScreen !== 'game' && <PlayerCard />}
+        <div className={currentScreen !== 'queue' && currentScreen !== 'game' ? 'mt-6' : ''}>
           {renderScreen()}
         </div>
       </div>
+      {showStatsModal && <StatsScreen />}
     </div>
   );
 }

@@ -9,7 +9,7 @@ import { Edit2, Save, X } from 'lucide-react';
 
 export function PlayerCard() {
   const { playerData, updateUsername } = usePlayerData();
-  const { setCurrentScreen } = useGameState();
+  const { setShowStatsModal } = useGameState();
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [tempUsername, setTempUsername] = useState(playerData.username);
 
@@ -91,7 +91,7 @@ export function PlayerCard() {
           <div className="text-right">
             <div className="text-sm text-gray-400">Season {playerData.currentSeason}</div>
             <Button
-              onClick={() => setCurrentScreen('stats')}
+              onClick={() => setShowStatsModal(true)}
               className="mt-2 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/25"
             >
               Stats

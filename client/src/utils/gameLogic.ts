@@ -21,7 +21,7 @@ export function estimateQueueTime(playlist: '1v1' | '2v2' | '3v3', mmr: number):
   const isPeakHours = hour >= 18 && hour <= 23;
   
   // Base queue time factors
-  let baseTime = 30; // 30 seconds base
+  let baseTime = 15; // 15 seconds base (reduced from 30)
   
   // Playlist popularity (1v1 most popular, 3v3 least)
   const playlistMultiplier = {
@@ -30,12 +30,29 @@ export function estimateQueueTime(playlist: '1v1' | '2v2' | '3v3', mmr: number):
     '3v3': 1.8,
   };
   
-  // MMR affects queue time (extreme ranks take longer)
+  // MMR affects queue time - lower ranks get shorter queues, higher ranks get longer queues
   let mmrMultiplier = 1.0;
-  if (mmr < 300 || mmr > 1500) {
-    mmrMultiplier = 1.5;
-  } else if (mmr < 200 || mmr > 1800) {
+  if (mmr < 400) {
+    // Bronze - very fast queues
+    mmrMultiplier = 0.4;
+  } else if (mmr < 700) {
+    // Silver - fast queues
+    mmrMultiplier = 0.6;
+  } else if (mmr < 1000) {
+    // Gold - normal queues
+    mmrMultiplier = 1.0;
+  } else if (mmr < 1300) {
+    // Platinum - slightly longer queues
+    mmrMultiplier = 1.4;
+  } else if (mmr < 1600) {
+    // Diamond - longer queues
     mmrMultiplier = 2.0;
+  } else if (mmr < 1900) {
+    // Champion - much longer queues
+    mmrMultiplier = 2.8;
+  } else {
+    // Grand Champion - very long queues
+    mmrMultiplier = 4.0;
   }
   
   // Peak hours reduce queue time
@@ -50,5 +67,5 @@ export function estimateQueueTime(playlist: '1v1' | '2v2' | '3v3', mmr: number):
   const randomFactor = 0.8 + Math.random() * 0.4; // 0.8 to 1.2
   const finalTime = Math.floor(estimatedTime * randomFactor);
   
-  return Math.max(5, Math.min(300, finalTime)); // 5 seconds to 5 minutes
+  return Math.max(3, Math.min(420, finalTime)); // 3 seconds to 7 minutes
 }
