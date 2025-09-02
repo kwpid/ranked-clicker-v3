@@ -121,11 +121,11 @@ export const useTournament = create<TournamentState>()(
         const now = Date.now();
         if (now >= state.nextTournamentTime && state.queuedTournamentType) {
           // Start the tournament
-          state.startTournamentForTesting(state.queuedTournamentType);
-          
-          // Navigate to bracket screen for regular tournaments too
-          import('../stores/useGameState').then(({ useGameState }) => {
-            useGameState.getState().setCurrentScreen('tournament-bracket');
+          state.startTournamentForTesting(state.queuedTournamentType).then(() => {
+            // Navigate to bracket screen for regular tournaments too
+            import('../stores/useGameState').then(({ useGameState }) => {
+              useGameState.getState().setCurrentScreen('tournament-bracket');
+            });
           });
         }
       },
@@ -148,19 +148,27 @@ export const useTournament = create<TournamentState>()(
         });
       },
 
-      startTournamentForTesting: (type: TournamentType) => {
+      startTournamentForTesting: async (type: TournamentType) => {
         const tournamentId = `test-${Date.now()}`;
         
         // Generate AI opponents based on tournament type
         const playerCount = type === '1v1' ? 8 : type === '2v2' ? 8 : 12; // Teams for 2v2/3v3
         const players: TournamentPlayer[] = [];
         
-        // Add the real player
+        // Add the real player with their actual data
+        const playerData = await import('../stores/usePlayerData').then(({ usePlayerData }) => 
+          usePlayerData.getState().playerData
+        );
+        const highestMMR = Math.max(playerData.mmr['1v1'], playerData.mmr['2v2'], playerData.mmr['3v3']);
+        const rankInfo = await import('../utils/rankingSystem').then(({ getRankInfo }) => 
+          getRankInfo(highestMMR)
+        );
+        
         players.push({
           id: 'player',
           name: 'You',
-          rank: 'Grand Champion',
-          mmr: 2800,
+          rank: rankInfo.name,
+          mmr: highestMMR,
           isPlayer: true,
           eliminated: false
         });
@@ -309,14 +317,25 @@ export const useTournament = create<TournamentState>()(
         }
         
         // Create next round
-        const nextRoundMap: { [key: string]: BracketRound } = {
-          'round1': 'round2',
-          'round2': 'round3', 
-          'round3': 'semifinal',
-          'semifinal': 'final'
-        };
+        // Dynamic round progression based on remaining players
+        let nextRound: BracketRound;
+        if (winners.length === 4) {
+          nextRound = 'semifinal';
+        } else if (winners.length === 2) {
+          nextRound = 'final';
+        } else if (winners.length > 4) {
+          nextRound = 'round2';
+        } else if (winners.length > 2) {
+          nextRound = 'round3';
+        } else {
+          return; // Tournament should be finished
+        }
         
-        const nextRound = nextRoundMap[state.currentTournament.currentRound];
+        console.log('🔄 Round progression:', {
+          currentRound: state.currentTournament.currentRound,
+          nextRound,
+          winnersCount: winners.length
+        });
         if (!nextRound) return;
         
         const nextMatches: TournamentMatch[] = [];

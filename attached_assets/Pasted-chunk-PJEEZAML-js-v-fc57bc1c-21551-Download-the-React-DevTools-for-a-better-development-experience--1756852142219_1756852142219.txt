@@ -1,0 +1,27 @@
+chunk-PJEEZAML.js?v=fc57bc1c:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+@radix-ui_react-dialog.js?v=9d672d76:1962 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(anonymous) @ @radix-ui_react-dialog.js?v=9d672d76:1962
+commitHookEffectListMount @ chunk-PJEEZAML.js?v=fc57bc1c:16915
+commitPassiveMountOnFiber @ chunk-PJEEZAML.js?v=fc57bc1c:18156
+commitPassiveMountEffects_complete @ chunk-PJEEZAML.js?v=fc57bc1c:18129
+commitPassiveMountEffects_begin @ chunk-PJEEZAML.js?v=fc57bc1c:18119
+commitPassiveMountEffects @ chunk-PJEEZAML.js?v=fc57bc1c:18109
+flushPassiveEffectsImpl @ chunk-PJEEZAML.js?v=fc57bc1c:19490
+flushPassiveEffects @ chunk-PJEEZAML.js?v=fc57bc1c:19447
+commitRootImpl @ chunk-PJEEZAML.js?v=fc57bc1c:19416
+commitRoot @ chunk-PJEEZAML.js?v=fc57bc1c:19277
+performSyncWorkOnRoot @ chunk-PJEEZAML.js?v=fc57bc1c:18895
+flushSyncCallbacks @ chunk-PJEEZAML.js?v=fc57bc1c:9119
+(anonymous) @ chunk-PJEEZAML.js?v=fc57bc1c:18627
+useTournament.tsx:536 🏆 completeTournamentGame called: {matchId: 'round1-1', playerWon: true, playerScore: 230, opponentScores: {…}}
+useTournament.tsx:548 ✅ Found match: {id: 'round1-1', round: 'round1', players: Array(2), games: Array(0), isComplete: false, …}
+useTournament.tsx:576 🎯 Match completion check: {playerWins: 1, opponentWins: 0, gamesNeededToWin: 1, isMatchComplete: true, matchWinner: 'player'}
+useTournament.tsx:607 🏁 Match complete! Checking for title award: {currentRound: 'round1', matchWinner: 'player', isPlayerWinner: true}
+useTournament.tsx:536 🏆 completeTournamentGame called: {matchId: 'round2-0', playerWon: true, playerScore: 312, opponentScores: {…}}
+useTournament.tsx:548 ✅ Found match: {id: 'round2-0', round: 'round2', players: Array(2), games: Array(0), isComplete: false, …}
+useTournament.tsx:576 🎯 Match completion check: {playerWins: 1, opponentWins: 0, gamesNeededToWin: 1, isMatchComplete: true, matchWinner: 'player'}
+useTournament.tsx:607 🏁 Match complete! Checking for title award: {currentRound: 'round2', matchWinner: 'player', isPlayerWinner: true}
+useTournament.tsx:536 🏆 completeTournamentGame called: {matchId: 'round3-0', playerWon: true, playerScore: 211, opponentScores: {…}}
+useTournament.tsx:548 ✅ Found match: {id: 'round3-0', round: 'round3', players: Array(2), games: Array(0), isComplete: false, …}
+useTournament.tsx:576 🎯 Match completion check: {playerWins: 1, opponentWins: 0, gamesNeededToWin: 1, isMatchComplete: true, matchWinner: 'player'}
+useTournament.tsx:607 🏁 Match complete! Checking for title award: {currentRound: 'round3', matchWinner: 'player', isPlayerWinner: true}

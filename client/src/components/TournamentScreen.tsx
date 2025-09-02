@@ -60,8 +60,8 @@ export function TournamentScreen() {
     joinTournamentQueue(type);
   };
 
-  const handleTestTournament = (type: TournamentType) => {
-    startTournamentForTesting(type);
+  const handleTestTournament = async (type: TournamentType) => {
+    await startTournamentForTesting(type);
     setCurrentScreen('tournament-bracket');
   };
 
