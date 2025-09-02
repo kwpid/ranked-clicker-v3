@@ -46,21 +46,25 @@ const ADDITIONAL_NAMES = [
 const ALL_LEADERBOARD_NAMES = [...PRO_NAMES, ...ADDITIONAL_NAMES];
 
 // Generate MMR based on position (higher positions have higher MMR)
-// Only for high Grand Champions (MMR 1515+)
+// Range: 2550 (minimum) to 3100 (maximum)
 const generateMMRForPosition = (position: number, playlist: '1v1' | '2v2' | '3v3'): number => {
-  // Base MMR for #1 player varies by playlist  
-  const baseMMR = {
-    '1v1': 2100, // 1v1 tends to have slightly lower top MMR
-    '2v2': 2300, // Most competitive playlist
-    '3v3': 2200  // Balanced
+  // Top MMR for #1 player varies by playlist
+  const topMMR = {
+    '1v1': 3000, // 1v1 slightly lower top end
+    '2v2': 3100, // Most competitive playlist gets highest MMR
+    '3v3': 3050  // Balanced
   }[playlist];
   
-  // Exponential decay from top to bottom
-  const mmrDecay = Math.pow(0.985, position - 1);
-  const mmr = Math.floor(baseMMR * mmrDecay);
+  const minMMR = 2550; // Minimum Grand Champion MMR
   
-  // Ensure minimum Grand Champion level (2550+ MMR)
-  return Math.max(mmr, 2550);
+  // Linear distribution from top to bottom (position 1-25)
+  const mmrRange = topMMR - minMMR;
+  const mmrDecrement = mmrRange / 24; // 24 steps from position 1 to 25
+  
+  const mmr = Math.floor(topMMR - ((position - 1) * mmrDecrement));
+  
+  // Ensure within bounds
+  return Math.max(minMMR, Math.min(topMMR, mmr));
 };
 
 // Generate wins/losses based on MMR and position
@@ -212,7 +216,7 @@ export const useLeaderboard = create<LeaderboardStore>()(
             
             // Random MMR fluctuation (-10 to +10)
             const change = Math.floor(Math.random() * 21) - 10;
-            const newMMR = Math.max(2550, player.mmr + change); // Minimum Grand Champion threshold
+            const newMMR = Math.max(2550, Math.min(3100, player.mmr + change)); // Keep within 2550-3100 range
             
             // Update stats if MMR changed significantly
             let newWins = player.wins;
