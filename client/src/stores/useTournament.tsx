@@ -375,9 +375,11 @@ export const useTournament = create<TournamentState>()(
       },
 
       awardTournamentTitle: (tournamentType: TournamentType, playerRank: string) => {
+        console.log('🏅 awardTournamentTitle called:', { tournamentType, playerRank });
         const state = get();
         const season = state.currentSeason;
         const baseRank = playerRank.split(' ')[0]; // Get "Silver", "Gold", etc.
+        console.log('📊 Title awarding details:', { season, baseRank });
         
         // Count current season wins for this tournament type (not per rank)
         const seasonKey = `s${season}-${tournamentType}`;
@@ -531,11 +533,19 @@ export const useTournament = create<TournamentState>()(
       },
 
       completeTournamentGame: (matchId: string, playerWon: boolean, playerScore: number, opponentScores: { [id: string]: number }) => {
+        console.log('🏆 completeTournamentGame called:', { matchId, playerWon, playerScore, opponentScores });
         const state = get();
-        if (!state.currentTournament) return;
+        if (!state.currentTournament) {
+          console.log('❌ No current tournament');
+          return;
+        }
         
         const match = state.currentTournament.matches.find(m => m.id === matchId);
-        if (!match) return;
+        if (!match) {
+          console.log('❌ Match not found:', matchId);
+          return;
+        }
+        console.log('✅ Found match:', match);
         
         const opponent = match.players.find(p => !p.isPlayer)!;
         const gameNumber = match.games.length + 1;
@@ -563,6 +573,14 @@ export const useTournament = create<TournamentState>()(
         const isMatchComplete = playerWins >= gamesNeededToWin || opponentWins >= gamesNeededToWin;
         const matchWinner = isMatchComplete ? (playerWins > opponentWins ? 'player' : opponent.id) : null;
         
+        console.log('🎯 Match completion check:', {
+          playerWins,
+          opponentWins,
+          gamesNeededToWin,
+          isMatchComplete,
+          matchWinner
+        });
+        
         // Update the match
         const updatedMatches = state.currentTournament.matches.map(m => {
           if (m.id === matchId) {
@@ -586,7 +604,14 @@ export const useTournament = create<TournamentState>()(
         if (isMatchComplete) {
           // Award tournament title if player won the entire tournament
           const currentRound = state.currentTournament?.currentRound;
+          console.log('🏁 Match complete! Checking for title award:', {
+            currentRound,
+            matchWinner,
+            isPlayerWinner: matchWinner === 'player'
+          });
+          
           if (currentRound === 'final' && matchWinner === 'player' && state.currentTournament) {
+            console.log('🎉 Player won the final! Awarding title...');
             // Player won the tournament! Get their current rank to award proper title
             import('../stores/usePlayerData').then(({ usePlayerData }) => {
               const playerData = usePlayerData.getState().playerData;
@@ -607,6 +632,11 @@ export const useTournament = create<TournamentState>()(
                   rankInfo,
                   baseRank,
                   fullRankName: rankInfo.name
+                });
+                
+                console.log('🏆 About to award title:', {
+                  tournamentType: state.currentTournament!.type,
+                  rank: baseRank
                 });
                 
                 get().awardTournamentTitle(state.currentTournament!.type, baseRank);
