@@ -9,6 +9,7 @@ export interface AIOpponent {
   score: number;
   isAI: boolean;
   isTeammate: boolean;
+  title?: string;
 }
 
 export function generateAIOpponents(gameMode: '1v1' | '2v2' | '3v3', playerMMR: number): AIOpponent[] {
@@ -26,6 +27,7 @@ export function generateAIOpponents(gameMode: '1v1' | '2v2' | '3v3', playerMMR: 
       score: 0,
       isAI: true,
       isTeammate: true,
+      title: getRandomAITitle(),
     });
   }
   
@@ -37,6 +39,7 @@ export function generateAIOpponents(gameMode: '1v1' | '2v2' | '3v3', playerMMR: 
       score: 0,
       isAI: true,
       isTeammate: false,
+      title: getRandomAITitle(),
     });
   }
   
@@ -53,6 +56,13 @@ function getRandomAIName(existingOpponents: AIOpponent[]): string {
   }
   
   return availableNames[Math.floor(Math.random() * availableNames.length)];
+}
+
+function getRandomAITitle(): string {
+  const AI_TITLES = [
+    'Rookie', 'Novice', 'Apprentice', 'Journeyman', 'Expert', 'Master', 'Grandmaster', 'Legend'
+  ];
+  return AI_TITLES[Math.floor(Math.random() * AI_TITLES.length)];
 }
 
 function generateOpponentMMR(playerMMR: number, isTeammate: boolean): number {

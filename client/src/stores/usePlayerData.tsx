@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { getRankInfo } from '../utils/rankingSystem';
 
 interface PlayerStats {
   wins: number;
@@ -7,9 +8,28 @@ interface PlayerStats {
   bestMMR: number;
 }
 
+interface SeasonReward {
+  rank: string;
+  season: number;
+  unlocked: boolean;
+}
+
+interface Title {
+  id: string;
+  name: string;
+  color: string;
+  glow?: boolean;
+  type: 'level' | 'season';
+  requirement?: number;
+}
+
 interface PlayerData {
   username: string;
   currentSeason: number;
+  level: number;
+  xp: number;
+  xpToNext: number;
+  equippedTitle?: string;
   mmr: {
     '1v1': number;
     '2v2': number;
@@ -25,6 +45,13 @@ interface PlayerData {
     '2v2': number;
     '3v3': number;
   };
+  seasonRewards: SeasonReward[];
+  unlockedTitles: string[];
+  seasonWins: {
+    '1v1': number;
+    '2v2': number;
+    '3v3': number;
+  };
 }
 
 interface PlayerDataStore {
@@ -34,11 +61,57 @@ interface PlayerDataStore {
   updateMMR: (playlist: '1v1' | '2v2' | '3v3', change: number) => void;
   updateStats: (playlist: '1v1' | '2v2' | '3v3', isWin: boolean) => void;
   resetSeason: () => void;
+  addXP: (amount: number) => void;
+  equipTitle: (titleId: string) => void;
+  getAvailableTitles: () => Title[];
+  checkSeasonRewards: () => void;
 }
+
+// Calculate XP needed for a level (1.25x scaling)
+const calculateXPForLevel = (level: number): number => {
+  return Math.floor(100 * Math.pow(1.25, level - 1));
+};
+
+// Helper function to get rank from MMR
+const getRankFromMMR = (mmr: number): string => {
+  const rankInfo = getRankInfo(mmr);
+  return rankInfo.name.split(' ')[0]; // Get base rank name (Bronze, Silver, etc.)
+};
+
+// Helper function to get rank color
+const getRankColor = (rank: string): string => {
+  const RANK_COLORS = {
+    'Bronze': '#CD7F32',
+    'Silver': '#C0C0C0', 
+    'Gold': '#FFD700',
+    'Platinum': '#E5E4E2',
+    'Diamond': '#B9F2FF',
+    'Champion': '#9966CC',
+    'Grand Champion': '#FFD700', // Gold for Grand Champion
+  };
+  return RANK_COLORS[rank as keyof typeof RANK_COLORS] || '#9CA3AF';
+};
+
+// Title definitions
+const ALL_TITLES: Title[] = [
+  // Level-based titles (gray)
+  { id: 'rookie', name: 'Rookie', color: '#9CA3AF', type: 'level', requirement: 1 },
+  { id: 'novice', name: 'Novice', color: '#9CA3AF', type: 'level', requirement: 5 },
+  { id: 'apprentice', name: 'Apprentice', color: '#9CA3AF', type: 'level', requirement: 10 },
+  { id: 'journeyman', name: 'Journeyman', color: '#9CA3AF', type: 'level', requirement: 20 },
+  { id: 'expert', name: 'Expert', color: '#9CA3AF', type: 'level', requirement: 35 },
+  { id: 'master', name: 'Master', color: '#9CA3AF', type: 'level', requirement: 50 },
+  { id: 'grandmaster', name: 'Grandmaster', color: '#9CA3AF', type: 'level', requirement: 75 },
+  { id: 'legend', name: 'Legend', color: '#9CA3AF', type: 'level', requirement: 100 },
+];
 
 const defaultPlayerData: PlayerData = {
   username: 'Player',
   currentSeason: 1,
+  level: 1,
+  xp: 0,
+  xpToNext: calculateXPForLevel(2),
+  equippedTitle: 'rookie',
   mmr: {
     '1v1': 500,
     '2v2': 500,
@@ -54,6 +127,13 @@ const defaultPlayerData: PlayerData = {
     '2v2': 5,
     '3v3': 5,
   },
+  seasonRewards: [],
+  unlockedTitles: ['rookie'],
+  seasonWins: {
+    '1v1': 0,
+    '2v2': 0,
+    '3v3': 0,
+  },
 };
 
 export const usePlayerData = create<PlayerDataStore>()(
@@ -63,9 +143,20 @@ export const usePlayerData = create<PlayerDataStore>()(
       
       initializePlayer: () => {
         const { playerData } = get();
-        if (!playerData.username || playerData.username === 'Player') {
-          // First time initialization - ensure fresh save
-          set({ playerData: { ...defaultPlayerData } });
+        if (!playerData.username || playerData.username === 'Player' || !playerData.seasonWins) {
+          // Initialize or migrate player data - ensure all fields exist
+          set({ playerData: { 
+            ...defaultPlayerData,
+            ...playerData, // Preserve existing data
+            // Ensure new fields exist
+            level: playerData.level || 1,
+            xp: playerData.xp || 0,
+            xpToNext: playerData.xpToNext || calculateXPForLevel(2),
+            equippedTitle: playerData.equippedTitle || 'rookie',
+            seasonRewards: playerData.seasonRewards || [],
+            unlockedTitles: playerData.unlockedTitles || ['rookie'],
+            seasonWins: playerData.seasonWins || { '1v1': 0, '2v2': 0, '3v3': 0 },
+          } });
         }
       },
       
@@ -107,6 +198,9 @@ export const usePlayerData = create<PlayerDataStore>()(
           const currentPlacement = state.playerData.placementMatches[playlist];
           const newPlacement = Math.max(0, currentPlacement - 1);
           
+          // XP calculation: 25 for win, 10 for loss
+          const xpGain = isWin ? 25 : 10;
+          
           return {
             playerData: {
               ...state.playerData,
@@ -122,9 +216,17 @@ export const usePlayerData = create<PlayerDataStore>()(
                 ...state.playerData.placementMatches,
                 [playlist]: newPlacement,
               },
+              seasonWins: {
+                ...state.playerData.seasonWins,
+                [playlist]: state.playerData.seasonWins[playlist] + (isWin ? 1 : 0),
+              },
             },
           };
         });
+        
+        // Add XP after updating stats
+        get().addXP(xpGain);
+        get().checkSeasonRewards();
       },
       
       resetSeason: () => {
@@ -143,8 +245,117 @@ export const usePlayerData = create<PlayerDataStore>()(
               '2v2': 5,
               '3v3': 5,
             },
+            seasonWins: {
+              '1v1': 0,
+              '2v2': 0,
+              '3v3': 0,
+            },
+            seasonRewards: [], // Reset season rewards
           },
         }));
+      },
+      
+      addXP: (amount: number) => {
+        set((state) => {
+          let newXP = state.playerData.xp + amount;
+          let newLevel = state.playerData.level;
+          let newXPToNext = state.playerData.xpToNext;
+          let newUnlockedTitles = [...state.playerData.unlockedTitles];
+          
+          // Check for level ups
+          while (newXP >= newXPToNext) {
+            newXP -= newXPToNext;
+            newLevel++;
+            newXPToNext = calculateXPForLevel(newLevel + 1);
+            
+            // Check for new title unlocks
+            const newTitles = ALL_TITLES.filter(
+              title => title.type === 'level' && 
+              title.requirement === newLevel && 
+              !newUnlockedTitles.includes(title.id)
+            );
+            newUnlockedTitles.push(...newTitles.map(t => t.id));
+          }
+          
+          return {
+            playerData: {
+              ...state.playerData,
+              xp: newXP,
+              level: newLevel,
+              xpToNext: newXPToNext,
+              unlockedTitles: newUnlockedTitles,
+            },
+          };
+        });
+      },
+      
+      equipTitle: (titleId: string) => {
+        set((state) => ({
+          playerData: {
+            ...state.playerData,
+            equippedTitle: titleId,
+          },
+        }));
+      },
+      
+      getAvailableTitles: () => {
+        const { playerData } = get();
+        return ALL_TITLES.filter(title => 
+          playerData.unlockedTitles.includes(title.id)
+        ).concat(
+          // Add season reward titles
+          playerData.seasonRewards
+            .filter(reward => reward.unlocked)
+            .map(reward => ({
+              id: `s${reward.season}-${reward.rank}`,
+              name: `S${reward.season} ${reward.rank}`,
+              color: getRankColor(reward.rank),
+              glow: reward.rank === 'Grand Champion',
+              type: 'season' as const,
+            }))
+        );
+      },
+      
+      checkSeasonRewards: () => {
+        set((state) => {
+          const { playerData } = state;
+          const newRewards = [...playerData.seasonRewards];
+          
+          // Check each playlist for season reward eligibility
+          (['1v1', '2v2', '3v3'] as const).forEach(playlist => {
+            const currentRank = getRankFromMMR(playerData.mmr[playlist]);
+            const seasonWins = playerData.seasonWins[playlist];
+            const rankOrder = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Champion', 'Grand Champion'];
+            const currentRankIndex = rankOrder.indexOf(currentRank);
+            
+            // Check rewards for each rank up to current rank
+            for (let i = 0; i <= currentRankIndex; i++) {
+              const rewardRank = rankOrder[i];
+              const winsNeeded = (i + 1) * 10; // 10, 20, 30, 40, 50, 60, 70
+              
+              const existingReward = newRewards.find(r => 
+                r.rank === rewardRank && r.season === playerData.currentSeason
+              );
+              
+              if (!existingReward) {
+                newRewards.push({
+                  rank: rewardRank,
+                  season: playerData.currentSeason,
+                  unlocked: seasonWins >= winsNeeded,
+                });
+              } else if (!existingReward.unlocked && seasonWins >= winsNeeded) {
+                existingReward.unlocked = true;
+              }
+            }
+          });
+          
+          return {
+            playerData: {
+              ...playerData,
+              seasonRewards: newRewards,
+            },
+          };
+        });
       },
     }),
     {
