@@ -211,11 +211,15 @@ export function GameScreen() {
       if (queueMode === 'tournament' && tournamentContext.isActive) {
         // Handle tournament game completion
         const opponentScores: { [id: string]: number } = {};
-        gameState.opponents.forEach(opponent => {
-          if (!opponent.isTeammate) {
-            opponentScores[opponent.name] = opponent.score;
-          }
-        });
+        
+        // For tournament games, we need to calculate the enemy team's total score
+        const enemyOpponents = gameState.opponents.filter(o => !o.isTeammate);
+        const totalEnemyScore = enemyOpponents.reduce((sum, o) => sum + o.score, 0);
+        
+        // Use the first enemy opponent's name as the key with total enemy team score
+        if (enemyOpponents.length > 0) {
+          opponentScores[enemyOpponents[0].name] = totalEnemyScore;
+        }
         
         completeTournamentGame(
           tournamentContext.matchId!,

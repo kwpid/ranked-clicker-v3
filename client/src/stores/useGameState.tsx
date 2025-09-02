@@ -53,7 +53,19 @@ export const useGameState = create<GameState>((set, get) => ({
   setTournamentContext: (context) => set({ tournamentContext: context }),
   
   startTournamentMatch: (matchId, bestOf, opponents) => {
-    const gameMode = opponents.length === 2 ? '1v1' : opponents.length === 4 ? '2v2' : '3v3';
+    // Determine game mode based on total team size (player + teammates + opponents)
+    // 1v1: 1 opponent, 2v2: 3 opponents (1 teammate + 2 enemies), 3v3: 5 opponents (2 teammates + 3 enemies)
+    const totalOpponents = opponents.length;
+    let gameMode: '1v1' | '2v2' | '3v3';
+    
+    if (totalOpponents === 1) {
+      gameMode = '1v1';
+    } else if (totalOpponents === 3) {
+      gameMode = '2v2';
+    } else {
+      gameMode = '3v3';
+    }
+    
     set({
       currentScreen: 'game',
       queueMode: 'tournament',

@@ -466,12 +466,15 @@ export const useTournament = create<TournamentState>()(
         const opponent = match.players.find(p => !p.isPlayer)!;
         const gameNumber = match.games.length + 1;
         
+        // Use the first opponent score from the scores object
+        const opponentScore = Object.values(opponentScores)[0] || 0;
+        
         const gameResult = {
           gameNumber,
           winner: playerWon ? 'player' : opponent.id,
           scores: {
             'player': playerScore,
-            [opponent.id]: opponentScores[opponent.id] || 0
+            [opponent.id]: opponentScore
           }
         };
         
@@ -507,6 +510,13 @@ export const useTournament = create<TournamentState>()(
         }));
         
         if (isMatchComplete) {
+          // Award tournament title if player won the entire tournament
+          const currentRound = state.currentTournament.currentRound;
+          if (currentRound === 'final' && matchWinner === 'player') {
+            // Player won the tournament!
+            get().awardTournamentTitle(state.currentTournament.type, 'Grand Champion');
+          }
+          
           // Check for round completion
           setTimeout(() => {
             get().checkRoundCompletion();
