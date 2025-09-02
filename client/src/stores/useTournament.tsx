@@ -161,10 +161,9 @@ export const useTournament = create<TournamentState>()(
         });
         
         // Add AI players
+        // Use AI names from the proper file
         const aiNames = [
-          'TournamentPro', 'ClickMaster', 'SpeedDemon', 'RapidFire', 
-          'QuickDraw', 'FastFingers', 'LightningClick', 'SwiftStrike',
-          'TurboTap', 'BlazingButtons', 'InstantImpact'
+          "L", "kupid", "l0st", "jayleng", "weweewew", "RisingPhoinex87", "dr.1", "prot", "hunt", "kif", "?", "rivverott", "1x Dark", "Moxxy!", "ä", "شغثغخ", "dark!", "Vortex", "FlickMaster17", "r", "Skywave!", "R3tr0", "TurboClash893", "Zynk", "Null_Force", "Orbital", "Boosted", "GravyTrain", "NitroNinja", "PixelPlay", "PhantomX", "Fury", "Zero!", "Moonlight", "QuickTap", "v1per", "Slugger", "MetaDrift", "Hydra", "Neo!", "ShadowDart", "SlipStream", "F1ick", "Karma", "Sparkz", "Glitch", "Dash7", "Ignite", "Cyclone", "Nova", "Opt1c", "Viral", "Stormz", "PyroBlast", "Bl1tz", "Echo", "Hover", "PulseRider"
         ];
         
         for (let i = 0; i < playerCount - 1; i++) {
@@ -379,10 +378,12 @@ export const useTournament = create<TournamentState>()(
         const seasonKey = `s${season}-${tournamentType}`;
         const currentWins = (state.seasonTournamentWins[seasonKey] || 0) + 1;
         
-        // Determine title color
+        // Determine title color - make Grand Champion titles always golden with glow
         let color: 'default' | 'green' | 'golden' = 'default';
-        if (currentWins >= 3) {
-          color = playerRank === 'Grand Champion' ? 'golden' : 'green';
+        if (playerRank === 'Grand Champion') {
+          color = 'golden'; // Grand Champion titles are always golden
+        } else if (currentWins >= 3) {
+          color = 'green';
         }
         
         const newTitle: TournamentTitle = {
@@ -415,7 +416,6 @@ export const useTournament = create<TournamentState>()(
             unlocked: true
           };
           
-          playerDataStore.addSeasonReward?.(seasonReward) || 
           usePlayerData.setState(state => ({
             playerData: {
               ...state.playerData,
@@ -541,10 +541,23 @@ export const useTournament = create<TournamentState>()(
               // Get highest MMR across all playlists to determine overall rank
               const highestMMR = Math.max(playerData.mmr['1v1'], playerData.mmr['2v2'], playerData.mmr['3v3']);
               
+              console.log('Tournament Winner Debug:', {
+                playerMMR: playerData.mmr,
+                highestMMR,
+                tournamentType: state.currentTournament?.type
+              });
+              
               import('../utils/rankingSystem').then(({ getRankInfo }) => {
                 const rankInfo = getRankInfo(highestMMR);
                 const baseRank = rankInfo.name.split(' ')[0]; // Get "Silver", "Gold", etc.
-                get().awardTournamentTitle(state.currentTournament.type, baseRank);
+                
+                console.log('Rank Detection:', {
+                  rankInfo,
+                  baseRank,
+                  fullRankName: rankInfo.name
+                });
+                
+                get().awardTournamentTitle(state.currentTournament!.type, baseRank);
               });
             });
           }

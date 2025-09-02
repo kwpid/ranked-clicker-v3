@@ -309,8 +309,8 @@ export const usePlayerData = create<PlayerDataStore>()(
             .map(reward => ({
               id: `s${reward.season}-${reward.rank}`,
               name: `S${reward.season} ${reward.rank}`,
-              color: getRankColor(reward.rank),
-              glow: reward.rank === 'Grand Champion',
+              color: reward.rank.includes('Grand Champion') ? '#FFD700' : getRankColor(reward.rank.split(' ')[0]),
+              glow: reward.rank.includes('Grand Champion'),
               type: 'season' as const,
             }))
         );
