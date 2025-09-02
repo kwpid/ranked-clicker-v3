@@ -53,6 +53,7 @@ export const useGameState = create<GameState>((set, get) => ({
   setTournamentContext: (context) => set({ tournamentContext: context }),
   
   startTournamentMatch: (matchId, bestOf, opponents) => {
+    console.log('🎮 startTournamentMatch called:', { matchId, bestOf, opponents });
     // Determine game mode based on total team size (player + teammates + opponents)
     // 1v1: 1 opponent, 2v2: 3 opponents (1 teammate + 2 enemies), 3v3: 5 opponents (2 teammates + 3 enemies)
     const totalOpponents = opponents.length;

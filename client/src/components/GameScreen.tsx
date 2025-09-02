@@ -41,13 +41,17 @@ export function GameScreen() {
 
   // Initialize opponents and game only once when component mounts
   useEffect(() => {
+    console.log('👥 GameScreen opponent setup:', { gameMode, queueMode, currentOpponents: gameState.opponents });
+    
     if (gameMode && queueMode !== 'tournament' && gameState.opponents.length === 0) {
       // Only generate AI opponents for non-tournament games
+      console.log('🤖 Generating regular AI opponents');
       const currentMMR = playerData.mmr[gameMode];
       const opponents = generateAIOpponents(gameMode, currentMMR);
       setGameState(prev => ({ ...prev, opponents }));
     } else if (queueMode === 'tournament' && gameState.opponents.length > 0) {
       // Convert tournament opponents to proper game format
+      console.log('🏆 Converting tournament opponents:', gameState.opponents);
       const convertedOpponents = gameState.opponents.map(o => ({
         name: o.name,
         score: 0,
@@ -55,6 +59,7 @@ export function GameScreen() {
         isTeammate: o.isTeammate,
         title: 'Tournament Opponent'
       }));
+      console.log('✅ Converted opponents:', convertedOpponents);
       setGameState(prev => ({ ...prev, opponents: convertedOpponents }));
     }
   }, [gameMode, queueMode]); // Depend on both gameMode and queueMode
