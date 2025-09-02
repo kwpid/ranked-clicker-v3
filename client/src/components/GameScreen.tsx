@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useGameState } from '../stores/useGameState';
 import { usePlayerData } from '../stores/usePlayerData';
 import { generateAIOpponents, simulateAIClicks } from '../utils/aiOpponents';
@@ -32,13 +32,18 @@ export function GameScreen() {
   const [countdownTime, setCountdownTime] = useState(3);
   const [gameTime, setGameTime] = useState(60);
 
+  // Memoize the current MMR to prevent infinite loops
+  const currentMMR = useMemo(() => {
+    return gameMode ? playerData.mmr[gameMode] : 0;
+  }, [gameMode, playerData.mmr[gameMode || '1v1']]);
+
   // Initialize opponents and game
   useEffect(() => {
     if (gameMode) {
-      const opponents = generateAIOpponents(gameMode, playerData.mmr[gameMode]);
+      const opponents = generateAIOpponents(gameMode, currentMMR);
       setGameState(prev => ({ ...prev, opponents }));
     }
-  }, [gameMode, playerData.mmr[gameMode!]]);
+  }, [gameMode, currentMMR]);
 
   // Handle clicking/spacebar
   const handleClick = useCallback(() => {
@@ -101,7 +106,7 @@ export function GameScreen() {
         setGameState(prev => {
           const updatedOpponents = prev.opponents.map(opponent => {
             if (opponent.isAI) {
-              const additionalClicks = simulateAIClicks(playerData.mmr[gameMode!]);
+              const additionalClicks = simulateAIClicks(currentMMR);
               return { ...opponent, score: opponent.score + additionalClicks };
             }
             return opponent;
@@ -127,7 +132,7 @@ export function GameScreen() {
 
       return () => clearInterval(interval);
     }
-  }, [gameState.phase, gameMode, playerData.mmr]);
+  }, [gameState.phase, currentMMR]);
 
   // Handle game end
   useEffect(() => {
@@ -136,16 +141,16 @@ export function GameScreen() {
       
       if (queueMode === 'ranked') {
         const mmrChange = calculateMMRChange(
-          playerData.mmr[gameMode!],
+          currentMMR,
           isWin,
-          gameState.opponents.filter(o => !o.isTeammate).map(o => playerData.mmr[gameMode!])
+          gameState.opponents.filter(o => !o.isTeammate).map(() => currentMMR)
         );
         updateMMR(gameMode!, mmrChange);
       }
 
       updateStats(gameMode!, isWin);
     }
-  }, [gameState.phase, gameState.teamScore, gameState.opponentTeamScore, queueMode, gameMode, playerData.mmr, updateMMR, updateStats]);
+  }, [gameState.phase, gameState.teamScore, gameState.opponentTeamScore, queueMode, gameMode, currentMMR, updateMMR, updateStats]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -199,9 +204,9 @@ export function GameScreen() {
               {queueMode === 'ranked' && (
                 <div className="text-sm text-gray-400">
                   MMR Change: {isWin ? '+' : ''}{calculateMMRChange(
-                    playerData.mmr[gameMode!],
+                    currentMMR,
                     isWin,
-                    gameState.opponents.filter(o => !o.isTeammate).map(() => playerData.mmr[gameMode!])
+                    gameState.opponents.filter(o => !o.isTeammate).map(() => currentMMR)
                   )}
                 </div>
               )}
