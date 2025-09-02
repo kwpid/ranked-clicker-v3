@@ -5,16 +5,17 @@ import { getOnlinePlayerCount, estimateQueueTime } from '../utils/gameLogic';
 import { getRankInfo } from '../utils/rankingSystem';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { ArrowLeft, Users, Clock, Loader2, Trophy, Star } from 'lucide-react';
+import { ArrowLeft, Users, Clock, Loader2, Trophy, Star, BarChart3 } from 'lucide-react';
 
 export function QueueScreen() {
   const { queueMode, setCurrentScreen, setGameMode, setOpponents } = useGameState();
   const { playerData } = usePlayerData();
-  const [selectedPlaylist, setSelectedPlaylist] = useState<'1v1' | '2v2' | '3v3' | null>(null);
+  const [selectedPlaylist, setSelectedPlaylist] = useState<'1v1' | '2v2' | '3v3' | null>('1v1');
   const [isQueuing, setIsQueuing] = useState(false);
   const [queueTime, setQueueTime] = useState(0);
   const [estimatedTime, setEstimatedTime] = useState(0);
   const [onlineCount, setOnlineCount] = useState(0);
+  const [showLadder, setShowLadder] = useState(false);
 
   useEffect(() => {
     // Update online player count every few seconds
@@ -73,6 +74,70 @@ export function QueueScreen() {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const generateRankLadder = () => {
+    const ranks = [
+      { name: 'Bronze', color: '#CD7F32', tiers: ['V', 'IV', 'III', 'II', 'I'], baseMmr: 0 },
+      { name: 'Silver', color: '#C0C0C0', tiers: ['V', 'IV', 'III', 'II', 'I'], baseMmr: 300 },
+      { name: 'Gold', color: '#FFD700', tiers: ['V', 'IV', 'III', 'II', 'I'], baseMmr: 600 },
+      { name: 'Platinum', color: '#E5E4E2', tiers: ['V', 'IV', 'III', 'II', 'I'], baseMmr: 1050 },
+      { name: 'Diamond', color: '#B9F2FF', tiers: ['V', 'IV', 'III', 'II', 'I'], baseMmr: 1500 },
+      { name: 'Champion', color: '#9966CC', tiers: ['V', 'IV', 'III', 'II', 'I'], baseMmr: 1950 },
+      { name: 'Grand Champion', color: '#FF6B6B', tiers: ['1+'], baseMmr: 2550 }
+    ];
+
+    const ladder: Array<{
+      name: string;
+      tier: string;
+      mmr: number;
+      color: string;
+      isCurrentRank: boolean;
+      playlist: '1v1' | '2v2' | '3v3';
+    }> = [];
+
+    (['1v1', '2v2', '3v3'] as const).forEach(playlist => {
+      const playerMMR = playerData.mmr[playlist];
+      const playerRankInfo = getRankInfo(playerMMR);
+      
+      ranks.forEach(rank => {
+        if (rank.name === 'Grand Champion') {
+          const currentGCLevel = Math.max(1, Math.floor((playerMMR - rank.baseMmr) / 100) + 1);
+          for (let level = 1; level <= Math.max(5, currentGCLevel + 2); level++) {
+            const mmr = rank.baseMmr + (level - 1) * 100;
+            const isCurrentRank = playerMMR >= mmr && 
+              (level === currentGCLevel || (level === Math.max(5, currentGCLevel + 2) && playerMMR >= mmr));
+            ladder.push({
+              name: rank.name,
+              tier: level.toString(),
+              mmr,
+              color: rank.color,
+              isCurrentRank: playlist === selectedPlaylist && 
+                playerRankInfo.name.includes('Grand Champion') && 
+                playerRankInfo.name.includes(level.toString()),
+              playlist
+            });
+          }
+        } else {
+          rank.tiers.forEach((tier, index) => {
+            const tierMMR = rank.baseMmr + (index * Math.floor((ranks[ranks.indexOf(rank) + 1]?.baseMmr - rank.baseMmr || 250) / 5));
+            const isCurrentRank = playlist === selectedPlaylist && 
+              playerRankInfo.name === rank.name && 
+              playerRankInfo.division === tier;
+            ladder.push({
+              name: rank.name,
+              tier,
+              mmr: tierMMR,
+              color: rank.color,
+              isCurrentRank,
+              playlist
+            });
+          });
+        }
+      });
+    });
+
+    return ladder.filter(item => item.playlist === selectedPlaylist).reverse();
   };
 
   if (isQueuing) {
@@ -146,8 +211,13 @@ export function QueueScreen() {
           return (
             <Card
               key={playlist}
-              className="bg-gray-800 border-gray-700 hover:border-blue-500 transition-all duration-300 cursor-pointer group"
-              onClick={() => handleStartQueue(playlist)}
+              className={`bg-gray-800 border-gray-700 hover:border-blue-500 transition-all duration-300 cursor-pointer group ${
+                selectedPlaylist === playlist ? 'ring-2 ring-blue-500 border-blue-500' : ''
+              }`}
+              onClick={() => {
+                setSelectedPlaylist(playlist);
+                if (!showLadder) handleStartQueue(playlist);
+              }}
             >
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl text-white group-hover:text-blue-400 transition-colors">
@@ -203,7 +273,13 @@ export function QueueScreen() {
                   ~{formatTime(estimated)} queue
                 </div>
 
-                <Button className="w-full bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25">
+                <Button 
+                  className="w-full bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStartQueue(playlist);
+                  }}
+                >
                   Queue {playlist}
                 </Button>
               </CardContent>
@@ -211,6 +287,61 @@ export function QueueScreen() {
           );
         })}
       </div>
+
+      {/* Rank Ladder Toggle */}
+      <div className="text-center mb-6">
+        <Button
+          onClick={() => setShowLadder(!showLadder)}
+          variant="outline"
+          className="border-gray-600 text-gray-300 hover:bg-gray-700"
+        >
+          <BarChart3 className="w-4 h-4 mr-2" />
+          {showLadder ? 'Hide' : 'Show'} Rank Ladder
+        </Button>
+      </div>
+
+      {/* Rank Ladder */}
+      {showLadder && selectedPlaylist && (
+        <Card className="bg-gray-800 border-gray-700 mb-6">
+          <CardHeader>
+            <CardTitle className="text-xl text-white flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-yellow-500" />
+              {selectedPlaylist} Rank Ladder
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-96 overflow-y-auto">
+              {generateRankLadder().map((rank, index) => (
+                <div
+                  key={`${rank.name}-${rank.tier}`}
+                  className={`p-3 rounded-lg border transition-all duration-200 ${
+                    rank.isCurrentRank 
+                      ? 'bg-blue-900/50 border-blue-500 ring-2 ring-blue-500/50' 
+                      : 'bg-gray-900/50 border-gray-700 hover:border-gray-600'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div 
+                        className="font-semibold text-sm"
+                        style={{ color: rank.color }}
+                      >
+                        {rank.name} {rank.tier}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {rank.mmr}+ MMR
+                      </div>
+                    </div>
+                    {rank.isCurrentRank && (
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="text-center">
         <div className="inline-flex items-center gap-2 text-sm text-gray-500 bg-gray-800 px-4 py-2 rounded-lg border border-gray-700">
