@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useGameState } from '../stores/useGameState';
 import { usePlayerData } from '../stores/usePlayerData';
 import { generateAIOpponents, simulateAIClicks } from '../utils/aiOpponents';
@@ -13,7 +13,9 @@ interface GameState {
   playerScore: number;
   teamScore: number;
   opponentTeamScore: number;
-  opponents: Array<{ name: string; score: number; isAI: boolean; isTeammate: boolean }>;
+  opponents: Array<{ name: string; score: number; isAI: boolean; isTeammate: boolean; hasForfeited?: boolean }>;
+  dontClickMode: boolean;
+  dontClickStartTime: number;
 }
 
 export function GameScreen() {
@@ -26,34 +28,41 @@ export function GameScreen() {
     playerScore: 0,
     teamScore: 0,
     opponentTeamScore: 0,
-    opponents: []
+    opponents: [],
+    dontClickMode: false,
+    dontClickStartTime: 0
   });
 
   const [countdownTime, setCountdownTime] = useState(3);
   const [gameTime, setGameTime] = useState(60);
 
-  // Memoize the current MMR to prevent infinite loops
-  const currentMMR = useMemo(() => {
-    return gameMode ? playerData.mmr[gameMode] : 0;
-  }, [gameMode, playerData.mmr[gameMode || '1v1']]);
-
-  // Initialize opponents and game
+  // Initialize opponents and game only once when component mounts
   useEffect(() => {
-    if (gameMode) {
+    if (gameMode && gameState.opponents.length === 0) {
+      const currentMMR = playerData.mmr[gameMode];
       const opponents = generateAIOpponents(gameMode, currentMMR);
       setGameState(prev => ({ ...prev, opponents }));
     }
-  }, [gameMode, currentMMR]);
+  }, [gameMode]); // Only depend on gameMode, not MMR
 
   // Handle clicking/spacebar
   const handleClick = useCallback(() => {
     if (gameState.phase === 'playing') {
-      setGameState(prev => ({
-        ...prev,
-        playerScore: prev.playerScore + 1
-      }));
+      if (gameState.dontClickMode) {
+        // Player clicked during "don't click" mode - lose points
+        setGameState(prev => ({
+          ...prev,
+          playerScore: Math.max(0, prev.playerScore - 2)
+        }));
+      } else {
+        // Normal click - gain points
+        setGameState(prev => ({
+          ...prev,
+          playerScore: prev.playerScore + 1
+        }));
+      }
     }
-  }, [gameState.phase]);
+  }, [gameState.phase, gameState.dontClickMode]);
 
   // Keyboard controls
   useEffect(() => {
@@ -99,26 +108,83 @@ export function GameScreen() {
     };
   }, [gameState.phase]);
 
-  // AI simulation during game
+  // Don't click mode logic
+  useEffect(() => {
+    if (gameState.phase === 'playing') {
+      const dontClickInterval = setInterval(() => {
+        // Random chance to trigger "don't click" mode every 5-15 seconds
+        if (!gameState.dontClickMode && Math.random() < 0.05) { // 5% chance per second
+          setGameState(prev => ({
+            ...prev,
+            dontClickMode: true,
+            dontClickStartTime: Date.now()
+          }));
+          
+          // End don't click mode after 1-3 seconds
+          setTimeout(() => {
+            setGameState(prev => ({
+              ...prev,
+              dontClickMode: false
+            }));
+          }, 1000 + Math.random() * 2000);
+        }
+      }, 1000);
+
+      return () => clearInterval(dontClickInterval);
+    }
+  }, [gameState.phase, gameState.dontClickMode]);
+
+  // AI simulation during game with forfeit logic
   useEffect(() => {
     if (gameState.phase === 'playing') {
       const interval = setInterval(() => {
         setGameState(prev => {
           const updatedOpponents = prev.opponents.map(opponent => {
-            if (opponent.isAI) {
-              const additionalClicks = simulateAIClicks(currentMMR);
-              return { ...opponent, score: opponent.score + additionalClicks };
+            if (opponent.isAI && !opponent.hasForfeited) {
+              // Check for forfeit conditions (too far behind with little time)
+              const teamScore = prev.playerScore + prev.opponents
+                .filter(o => o.isTeammate && !o.hasForfeited)
+                .reduce((sum, o) => sum + o.score, 0);
+              const enemyScore = prev.opponents
+                .filter(o => !o.isTeammate && !o.hasForfeited)
+                .reduce((sum, o) => sum + o.score, 0);
+              
+              const scoreDifference = opponent.isTeammate ? 
+                (enemyScore - teamScore) : (teamScore - enemyScore);
+              
+              // Forfeit if more than 15 points behind with less than 20 seconds left
+              if (scoreDifference > 15 && gameTime < 20 && Math.random() < 0.1) {
+                return { ...opponent, hasForfeited: true };
+              }
+              
+              // AI reaction time simulation for "don't click" mode
+              let additionalClicks = 0;
+              if (prev.dontClickMode) {
+                const reactionTime = Date.now() - prev.dontClickStartTime;
+                // AI has 200-800ms reaction time
+                const aiReactionTime = 200 + Math.random() * 600;
+                
+                if (reactionTime < aiReactionTime) {
+                  // AI clicked during "don't click" mode - lose points
+                  additionalClicks = -2;
+                }
+              } else {
+                // Normal AI clicking
+                additionalClicks = simulateAIClicks(playerData.mmr[gameMode!]);
+              }
+              
+              return { ...opponent, score: Math.max(0, opponent.score + additionalClicks) };
             }
             return opponent;
           });
 
-          // Calculate team scores
+          // Calculate team scores (excluding forfeited players)
           const playerTeamTotal = prev.playerScore + updatedOpponents
-            .filter(o => o.isTeammate)
+            .filter(o => o.isTeammate && !o.hasForfeited)
             .reduce((sum, o) => sum + o.score, 0);
           
           const opponentTeamTotal = updatedOpponents
-            .filter(o => !o.isTeammate)
+            .filter(o => !o.isTeammate && !o.hasForfeited)
             .reduce((sum, o) => sum + o.score, 0);
 
           return {
@@ -132,7 +198,7 @@ export function GameScreen() {
 
       return () => clearInterval(interval);
     }
-  }, [gameState.phase, currentMMR]);
+  }, [gameState.phase]);
 
   // Handle game end
   useEffect(() => {
@@ -140,6 +206,7 @@ export function GameScreen() {
       const isWin = gameState.teamScore > gameState.opponentTeamScore;
       
       if (queueMode === 'ranked') {
+        const currentMMR = playerData.mmr[gameMode!];
         const mmrChange = calculateMMRChange(
           currentMMR,
           isWin,
@@ -150,7 +217,7 @@ export function GameScreen() {
 
       updateStats(gameMode!, isWin);
     }
-  }, [gameState.phase, gameState.teamScore, gameState.opponentTeamScore, queueMode, gameMode, currentMMR, updateMMR, updateStats]);
+  }, [gameState.phase, gameState.teamScore, gameState.opponentTeamScore, queueMode, gameMode, updateMMR, updateStats]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -204,9 +271,9 @@ export function GameScreen() {
               {queueMode === 'ranked' && (
                 <div className="text-sm text-gray-400">
                   MMR Change: {isWin ? '+' : ''}{calculateMMRChange(
-                    currentMMR,
+                    playerData.mmr[gameMode!],
                     isWin,
-                    gameState.opponents.filter(o => !o.isTeammate).map(() => currentMMR)
+                    gameState.opponents.filter(o => !o.isTeammate).map(() => playerData.mmr[gameMode!])
                   )}
                 </div>
               )}
@@ -238,11 +305,20 @@ export function GameScreen() {
               <Button
                 onClick={handleClick}
                 disabled={gameState.phase !== 'playing'}
-                className="bg-purple-600 hover:bg-purple-700 text-white text-lg px-8 py-4 shadow-lg shadow-purple-500/25"
+                className={`text-white text-lg px-8 py-4 shadow-lg transition-all duration-200 ${
+                  gameState.dontClickMode 
+                    ? 'bg-red-600 hover:bg-red-700 shadow-red-500/25 animate-pulse' 
+                    : 'bg-purple-600 hover:bg-purple-700 shadow-purple-500/25'
+                }`}
               >
                 <Zap className="w-5 h-5 mr-2" />
-                CLICK ({gameState.playerScore})
+                {gameState.dontClickMode ? "DON'T CLICK!" : `CLICK (${gameState.playerScore})`}
               </Button>
+              {gameState.dontClickMode && (
+                <div className="text-red-400 text-sm mt-2 font-bold animate-bounce">
+                  ⚠️ STOP CLICKING OR LOSE POINTS! ⚠️
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -280,10 +356,13 @@ export function GameScreen() {
           <CardContent>
             <div className="space-y-2">
               {playerTeam.map((player, index) => (
-                <div key={index} className="flex justify-between items-center p-2 bg-gray-700 rounded">
+                <div key={index} className={`flex justify-between items-center p-2 bg-gray-700 rounded ${
+                  player.hasForfeited ? 'opacity-50' : ''
+                }`}>
                   <span className={player.isPlayer ? 'font-bold text-blue-400' : 'text-white'}>
                     {player.name}
                     {player.isPlayer && ' (You)'}
+                    {player.hasForfeited && ' [FORFEITED]'}
                   </span>
                   <span className="text-white font-semibold">{player.score}</span>
                 </div>
@@ -300,8 +379,13 @@ export function GameScreen() {
           <CardContent>
             <div className="space-y-2">
               {opponentTeam.map((opponent, index) => (
-                <div key={index} className="flex justify-between items-center p-2 bg-gray-700 rounded">
-                  <span className="text-white">{opponent.name}</span>
+                <div key={index} className={`flex justify-between items-center p-2 bg-gray-700 rounded ${
+                  opponent.hasForfeited ? 'opacity-50' : ''
+                }`}>
+                  <span className="text-white">
+                    {opponent.name}
+                    {opponent.hasForfeited && ' [FORFEITED]'}
+                  </span>
                   <span className="text-white font-semibold">{opponent.score}</span>
                 </div>
               ))}
