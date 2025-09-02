@@ -121,11 +121,10 @@ export const useTournament = create<TournamentState>()(
         const now = Date.now();
         if (now >= state.nextTournamentTime && state.queuedTournamentType) {
           // Start the tournament
-          state.startTournamentForTesting(state.queuedTournamentType).then(() => {
-            // Navigate to bracket screen for regular tournaments too
-            import('../stores/useGameState').then(({ useGameState }) => {
-              useGameState.getState().setCurrentScreen('tournament-bracket');
-            });
+          state.startTournamentForTesting(state.queuedTournamentType);
+          // Navigate to bracket screen for regular tournaments too
+          import('../stores/useGameState').then(({ useGameState }) => {
+            useGameState.getState().setCurrentScreen('tournament-bracket');
           });
         }
       },
@@ -224,7 +223,7 @@ export const useTournament = create<TournamentState>()(
               games: [],
               isComplete: false,
               winner: null,
-              bestOf: 1
+              bestOf: 1 // All tournament matches are best of 1
             });
           }
         }
@@ -331,17 +330,12 @@ export const useTournament = create<TournamentState>()(
           return; // Tournament should be finished
         }
         
-        console.log('🔄 Round progression:', {
-          currentRound: state.currentTournament.currentRound,
-          nextRound,
-          winnersCount: winners.length
-        });
         if (!nextRound) return;
         
         const nextMatches: TournamentMatch[] = [];
         for (let i = 0; i < winners.length; i += 2) {
           if (i + 1 < winners.length) {
-            const bestOf = nextRound === 'semifinal' ? 3 : nextRound === 'final' ? 5 : 1;
+            const bestOf = 1; // Simplified: All tournament matches are best of 1
             nextMatches.push({
               id: `${nextRound}-${i / 2}`,
               round: nextRound,
@@ -394,11 +388,9 @@ export const useTournament = create<TournamentState>()(
       },
 
       awardTournamentTitle: (tournamentType: TournamentType, playerRank: string) => {
-        console.log('🏅 awardTournamentTitle called:', { tournamentType, playerRank });
         const state = get();
         const season = state.currentSeason;
         const baseRank = playerRank.split(' ')[0]; // Get "Silver", "Gold", etc.
-        console.log('📊 Title awarding details:', { season, baseRank });
         
         // Count current season wins for this tournament type (not per rank)
         const seasonKey = `s${season}-${tournamentType}`;
@@ -525,18 +517,18 @@ export const useTournament = create<TournamentState>()(
         let opponents: Array<{ name: string; mmr: number; isTeammate: boolean }> = [];
         
         if (gameMode === '1v1') {
-          // 1v1: just the opponent
+          // 1v1: just the opponent - use exact name from bracket
           const opponent = match.players.find(p => !p.isPlayer)!;
           opponents = [{ name: opponent.name, mmr: opponent.mmr, isTeammate: false }];
         } else if (gameMode === '2v2') {
-          // 2v2: player + AI teammate vs 2 AI opponents
+          // 2v2: player + AI teammate vs 2 AI opponents - use exact names from bracket
           const opponentTeam = match.players.filter(p => !p.isPlayer);
           opponents = [
             { name: 'Teammate AI', mmr: 2500, isTeammate: true },
             ...opponentTeam.map(p => ({ name: p.name, mmr: p.mmr, isTeammate: false }))
           ];
         } else if (gameMode === '3v3') {
-          // 3v3: player + 2 AI teammates vs 3 AI opponents  
+          // 3v3: player + 2 AI teammates vs 3 AI opponents - use exact names from bracket
           const opponentTeam = match.players.filter(p => !p.isPlayer);
           opponents = [
             { name: 'Teammate AI 1', mmr: 2500, isTeammate: true },
@@ -552,19 +544,11 @@ export const useTournament = create<TournamentState>()(
       },
 
       completeTournamentGame: (matchId: string, playerWon: boolean, playerScore: number, opponentScores: { [id: string]: number }) => {
-        console.log('🏆 completeTournamentGame called:', { matchId, playerWon, playerScore, opponentScores });
         const state = get();
-        if (!state.currentTournament) {
-          console.log('❌ No current tournament');
-          return;
-        }
+        if (!state.currentTournament) return;
         
         const match = state.currentTournament.matches.find(m => m.id === matchId);
-        if (!match) {
-          console.log('❌ Match not found:', matchId);
-          return;
-        }
-        console.log('✅ Found match:', match);
+        if (!match) return;
         
         const opponent = match.players.find(p => !p.isPlayer)!;
         const gameNumber = match.games.length + 1;
@@ -592,13 +576,6 @@ export const useTournament = create<TournamentState>()(
         const isMatchComplete = playerWins >= gamesNeededToWin || opponentWins >= gamesNeededToWin;
         const matchWinner = isMatchComplete ? (playerWins > opponentWins ? 'player' : opponent.id) : null;
         
-        console.log('🎯 Match completion check:', {
-          playerWins,
-          opponentWins,
-          gamesNeededToWin,
-          isMatchComplete,
-          matchWinner
-        });
         
         // Update the match
         const updatedMatches = state.currentTournament.matches.map(m => {
@@ -623,40 +600,16 @@ export const useTournament = create<TournamentState>()(
         if (isMatchComplete) {
           // Award tournament title if player won the entire tournament
           const currentRound = state.currentTournament?.currentRound;
-          console.log('🏁 Match complete! Checking for title award:', {
-            currentRound,
-            matchWinner,
-            isPlayerWinner: matchWinner === 'player'
-          });
-          
           if (currentRound === 'final' && matchWinner === 'player' && state.currentTournament) {
-            console.log('🎉 Player won the final! Awarding title...');
             // Player won the tournament! Get their current rank to award proper title
             import('../stores/usePlayerData').then(({ usePlayerData }) => {
               const playerData = usePlayerData.getState().playerData;
               // Get highest MMR across all playlists to determine overall rank
               const highestMMR = Math.max(playerData.mmr['1v1'], playerData.mmr['2v2'], playerData.mmr['3v3']);
               
-              console.log('Tournament Winner Debug:', {
-                playerMMR: playerData.mmr,
-                highestMMR,
-                tournamentType: state.currentTournament?.type
-              });
-              
               import('../utils/rankingSystem').then(({ getRankInfo }) => {
                 const rankInfo = getRankInfo(highestMMR);
                 const baseRank = rankInfo.name.includes('Grand Champion') ? 'Grand Champion' : rankInfo.name.split(' ')[0];
-                
-                console.log('Rank Detection:', {
-                  rankInfo,
-                  baseRank,
-                  fullRankName: rankInfo.name
-                });
-                
-                console.log('🏆 About to award title:', {
-                  tournamentType: state.currentTournament!.type,
-                  rank: baseRank
-                });
                 
                 get().awardTournamentTitle(state.currentTournament!.type, baseRank);
               });
