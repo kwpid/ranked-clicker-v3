@@ -1,0 +1,95 @@
+Build a dark-themed web app for a Ranked Clicker Game with a clean, modern layout.
+
+Layout & Navigation
+
+Player Card at the top:
+
+Editable username (1–20 characters).
+
+Current rank + MMR for each playlist (1v1, 2v2, 3v3).
+
+"Stats" button → view lifetime stats, wins/losses, and best rank achieved.
+
+Main Section:
+
+Two large buttons:
+
+Queue Casual → choose 1v1, 2v2, 3v3.
+
+Queue Ranked → choose 1v1, 2v2, 3v3.
+
+Ranked System
+
+Separate MMR and rank for each playlist (1v1, 2v2, 3v3).
+
+Ranks:
+
+Bronze I–III
+
+Silver I–III
+
+Gold I–III
+
+Platinum I–III
+
+Diamond I–III
+
+Champion I–III
+
+Grand Champion (endless scaling).
+
+Each non-GC rank has Divisions I–V (e.g., Silver II, Div IV).
+
+Seasons:
+
+1 month long, reset on the first of each month.
+
+Season increment like Season 1, Season 2, etc
+
+Soft reset at season start (similar to Rocket League).
+
+Placement Matches: at the end of each season, when the new season starts, players have to play some placement matches (5 total for each queue, (1v1,2v2,3v3)) which helps put them into an initial rank
+
+Game Rules (Ranked Clicker)
+
+When a match starts, show a 3-second countdown.
+
+Then, a 1-minute timer runs.
+
+Players score by clicking or pressing spacebar repeatedly.
+
+The team with the highest combined score at the end wins.
+
+Supports 1v1, 2v2, 3v3.
+
+AI Opponents
+
+AI has customizable names from a list (e.g., ["Bot Max", "CyberSam", "Clickertron", "AutoTapper"]).
+
+AI generates clicks per second based on difficulty (scaled with MMR).
+
+Bronze → very low CPS.
+
+Silver/Gold → moderate CPS.
+
+Platinum+ → high CPS.
+
+Champion/GC → near-human randomized CPS patterns.
+
+Extra Features
+
+Stats Page shows:
+
+Total games played.
+
+Wins/losses per playlist.
+
+Best rank achieved each season.
+
+Dark UI with glowing buttons and smooth layout.
+
+Team scoreboard visible during matches.
+
+Add a queue screen, and a realistic online player system
+Peak hours = more players, less queue time, low hours = less players, higher queue times
+Enusre the player starts on a fresh save, the current season is Season 1
