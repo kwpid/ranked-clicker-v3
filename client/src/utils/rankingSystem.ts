@@ -56,13 +56,13 @@ export function getRankInfo(mmr: number): RankInfo {
           tier: 8,
         };
       } else {
-        // Calculate division within rank (I-V)
+        // Calculate division within rank (I-V, where I is lowest, V is highest)
         const nextRankEntry = rankEntries.find(([name, thresh]) => thresh > threshold);
         const nextThreshold = nextRankEntry ? nextRankEntry[1] : threshold + 200;
         const mmrRange = nextThreshold - threshold;
         const divisionSize = mmrRange / 5;
         const divisionIndex = Math.min(4, Math.floor((mmr - threshold) / divisionSize));
-        const divisions = ['V', 'IV', 'III', 'II', 'I'];
+        const divisions = ['I', 'II', 'III', 'IV', 'V'];
         
         return {
           name: rankName,
@@ -78,7 +78,7 @@ export function getRankInfo(mmr: number): RankInfo {
   return {
     name: 'Bronze I',
     color: RANK_COLORS.Bronze,
-    division: 'V',
+    division: 'I',
     tier: 0,
   };
 }

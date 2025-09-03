@@ -78,12 +78,12 @@ export function QueueScreen() {
 
   const generateRankLadder = () => {
     const ranks = [
-      { name: 'Bronze', color: '#CD7F32', tiers: ['V', 'IV', 'III', 'II', 'I'], baseMmr: 0 },
-      { name: 'Silver', color: '#C0C0C0', tiers: ['V', 'IV', 'III', 'II', 'I'], baseMmr: 300 },
-      { name: 'Gold', color: '#FFD700', tiers: ['V', 'IV', 'III', 'II', 'I'], baseMmr: 600 },
-      { name: 'Platinum', color: '#E5E4E2', tiers: ['V', 'IV', 'III', 'II', 'I'], baseMmr: 1050 },
-      { name: 'Diamond', color: '#B9F2FF', tiers: ['V', 'IV', 'III', 'II', 'I'], baseMmr: 1500 },
-      { name: 'Champion', color: '#9966CC', tiers: ['V', 'IV', 'III', 'II', 'I'], baseMmr: 1950 },
+      { name: 'Bronze', color: '#CD7F32', tiers: ['I', 'II', 'III', 'IV', 'V'], baseMmr: 0 },
+      { name: 'Silver', color: '#C0C0C0', tiers: ['I', 'II', 'III', 'IV', 'V'], baseMmr: 300 },
+      { name: 'Gold', color: '#FFD700', tiers: ['I', 'II', 'III', 'IV', 'V'], baseMmr: 600 },
+      { name: 'Platinum', color: '#E5E4E2', tiers: ['I', 'II', 'III', 'IV', 'V'], baseMmr: 1050 },
+      { name: 'Diamond', color: '#B9F2FF', tiers: ['I', 'II', 'III', 'IV', 'V'], baseMmr: 1500 },
+      { name: 'Champion', color: '#9966CC', tiers: ['I', 'II', 'III', 'IV', 'V'], baseMmr: 1950 },
       { name: 'Grand Champion', color: '#FF6B6B', tiers: ['1+'], baseMmr: 2550 }
     ];
 
