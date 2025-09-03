@@ -37,7 +37,10 @@ export function GameScreen() {
   });
 
   const [countdownTime, setCountdownTime] = useState(3);
-  const [gameTime, setGameTime] = useState(60);
+  const [gameTime, setGameTime] = useState(() => {
+    // Random game time between 30-50 seconds for realistic AI game completion
+    return 30 + Math.floor(Math.random() * 21);
+  });
 
   // Initialize opponents and game only once when component mounts
   useEffect(() => {
@@ -284,7 +287,7 @@ export function GameScreen() {
               dontClickStartTime: 0
             });
             setCountdownTime(3);
-            setGameTime(60);
+            setGameTime(30 + Math.floor(Math.random() * 21));
           }, 3000);
         }
       } else {

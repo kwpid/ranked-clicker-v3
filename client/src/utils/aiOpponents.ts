@@ -59,7 +59,8 @@ function getRandomAIName(existingOpponents: AIOpponent[]): string {
 }
 
 function getRandomAITitle(aiMMR: number): string {
-  const currentSeason = 1; // You can get this from game state if needed
+  // Get current season dynamically (could be passed in from game state)
+  const currentSeason = Math.floor(Math.random() * 3) + 1; // Seasons 1-3 for variety
   
   // Get AI's rank based on MMR
   const getRankFromMMR = (mmr: number): string => {
@@ -76,42 +77,58 @@ function getRandomAITitle(aiMMR: number): string {
   const rankOrder = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Champion', 'Grand Champion'];
   const aiRankIndex = rankOrder.indexOf(aiRank);
   
-  // Level-based titles (always available)
+  // Level-based titles (always available) - simulate different XP levels
   const LEVEL_TITLES = [
     'ROOKIE', 'NOVICE', 'APPRENTICE', 'JOURNEYMAN', 'EXPERT', 'MASTER', 'GRANDMASTER', 'LEGEND'
   ];
   
-  // Possible season reward titles (limited by rank)
+  // Season reward titles (limited by rank - AI can only have rewards from ranks they could achieve)
   const SEASON_TITLES: string[] = [];
+  // Only generate season rewards for ranks at or below AI's current rank
   for (let i = 0; i <= aiRankIndex; i++) {
     const rank = rankOrder[i];
-    // Random past seasons (1 to current season)
-    const randomSeason = Math.floor(Math.random() * currentSeason) + 1;
-    SEASON_TITLES.push(`S${randomSeason} ${rank.toUpperCase()}`);
+    // Generate titles from current season or previous seasons
+    for (let season = 1; season <= currentSeason; season++) {
+      SEASON_TITLES.push(`S${season} ${rank.toUpperCase()}`);
+    }
   }
   
-  // Tournament titles (limited by rank)
+  // Tournament titles (limited by rank - same constraint as season rewards)
   const TOURNAMENT_TITLES: string[] = [];
   for (let i = 0; i <= aiRankIndex; i++) {
     const rank = rankOrder[i];
-    // Random past seasons for tournament titles
-    const randomSeason = Math.floor(Math.random() * currentSeason) + 1;
-    TOURNAMENT_TITLES.push(`S${randomSeason} ${rank.toUpperCase()} TOURNAMENT WINNER`);
+    // Generate tournament titles from current season or previous seasons
+    for (let season = 1; season <= currentSeason; season++) {
+      TOURNAMENT_TITLES.push(`S${season} ${rank.toUpperCase()} TOURNAMENT WINNER`);
+    }
   }
   
-  // Combine all possible titles
-  const allPossibleTitles = [
-    ...LEVEL_TITLES,
-    ...SEASON_TITLES,
-    ...TOURNAMENT_TITLES
-  ];
+  // Weight the probabilities - level titles more common, season/tournament titles rarer
+  const titleCategories = [];
   
-  // 30% chance for no title, 70% chance for a title
-  if (Math.random() < 0.3) {
+  // Always include level titles (60% weight)
+  for (let i = 0; i < 6; i++) {
+    titleCategories.push(...LEVEL_TITLES);
+  }
+  
+  // Season titles (30% weight) - only if AI has appropriate rank
+  if (SEASON_TITLES.length > 0) {
+    for (let i = 0; i < 3; i++) {
+      titleCategories.push(...SEASON_TITLES);
+    }
+  }
+  
+  // Tournament titles (10% weight) - only if AI has appropriate rank
+  if (TOURNAMENT_TITLES.length > 0) {
+    titleCategories.push(...TOURNAMENT_TITLES);
+  }
+  
+  // 40% chance for no title, 60% chance for a title
+  if (Math.random() < 0.4) {
     return '';
   }
   
-  return allPossibleTitles[Math.floor(Math.random() * allPossibleTitles.length)];
+  return titleCategories[Math.floor(Math.random() * titleCategories.length)];
 }
 
 function generateOpponentMMR(playerMMR: number, isTeammate: boolean): number {
