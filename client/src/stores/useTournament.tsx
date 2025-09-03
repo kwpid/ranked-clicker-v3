@@ -629,9 +629,16 @@ export const useTournament = create<TournamentState>()(
   )
 );
 
-// Initialize tournament timing
+// Initialize tournament timing and reset queue state on refresh
 setTimeout(() => {
-  useTournament.getState().calculateNextTournamentTime();
+  const state = useTournament.getState();
+  
+  // Reset queue state on page load/refresh to prevent stuck states
+  if (state.isQueued && (!state.currentTournament || state.currentTournament.phase !== 'in-progress')) {
+    state.leaveTournamentQueue();
+  }
+  
+  state.calculateNextTournamentTime();
 }, 100);
 
 // Update tournament timing every minute
@@ -643,3 +650,22 @@ setInterval(() => {
 setInterval(() => {
   useTournament.getState().checkAndStartTournament();
 }, 5000);
+
+// Handle page visibility changes and beforeunload to prevent stuck queue states
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    const state = useTournament.getState();
+    // If in queue but not in an active tournament, leave queue when page becomes hidden
+    if (state.isQueued && (!state.currentTournament || state.currentTournament.phase !== 'in-progress')) {
+      state.leaveTournamentQueue();
+    }
+  }
+});
+
+// Clear queue on page unload (refresh/close)
+window.addEventListener('beforeunload', () => {
+  const state = useTournament.getState();
+  if (state.isQueued && (!state.currentTournament || state.currentTournament.phase !== 'in-progress')) {
+    state.leaveTournamentQueue();
+  }
+});
