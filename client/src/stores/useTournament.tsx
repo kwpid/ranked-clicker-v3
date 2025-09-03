@@ -392,13 +392,17 @@ export const useTournament = create<TournamentState>()(
         const matches: TournamentMatch[] = [];
         const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
         
-        // Round 1: All players (best of 1)
-        for (let i = 0; i < shuffledPlayers.length; i += 2) {
-          if (i + 1 < shuffledPlayers.length) {
+        // Determine players per match based on tournament type
+        const playersPerMatch = type === '1v1' ? 2 : type === '2v2' ? 4 : 6; // 1v1=2, 2v2=4, 3v3=6
+        
+        // Round 1: Create matches with appropriate number of players
+        for (let i = 0; i < shuffledPlayers.length; i += playersPerMatch) {
+          if (i + playersPerMatch - 1 < shuffledPlayers.length) {
+            const matchPlayers = shuffledPlayers.slice(i, i + playersPerMatch);
             matches.push({
-              id: `round1-${i / 2}`,
+              id: `round1-${i / playersPerMatch}`,
               round: 'round1',
-              players: [shuffledPlayers[i], shuffledPlayers[i + 1]],
+              players: matchPlayers,
               games: [],
               isComplete: false,
               winner: null,
@@ -426,21 +430,44 @@ export const useTournament = create<TournamentState>()(
         
         const updatedMatches = state.currentTournament.matches.map(match => {
           if (!match.isComplete && !match.players.some(p => p.isPlayer)) {
-            // AI vs AI match - simulate result
-            const winner = Math.random() < 0.5 ? match.players[0] : match.players[1];
-            const gameResult = {
-              gameNumber: 1,
-              winner: winner.id,
-              scores: {
+            // AI vs AI match - simulate result based on tournament type
+            const gameMode = state.currentTournament!.type;
+            let winningTeam: TournamentPlayer[];
+            let scores: { [playerId: string]: number } = {};
+            
+            if (gameMode === '1v1') {
+              // Original 1v1 logic
+              const winner = Math.random() < 0.5 ? match.players[0] : match.players[1];
+              winningTeam = [winner];
+              scores = {
                 [match.players[0].id]: Math.floor(Math.random() * 50) + 30,
                 [match.players[1].id]: Math.floor(Math.random() * 50) + 30
-              }
+              };
+            } else {
+              // Team-based tournaments (2v2 or 3v3)
+              const teamSize = gameMode === '2v2' ? 2 : 3;
+              const team1 = match.players.slice(0, teamSize);
+              const team2 = match.players.slice(teamSize);
+              
+              // Determine winning team
+              winningTeam = Math.random() < 0.5 ? team1 : team2;
+              
+              // Generate team scores (sum of individual scores)
+              match.players.forEach(player => {
+                scores[player.id] = Math.floor(Math.random() * 50) + 30;
+              });
+            }
+            
+            const gameResult = {
+              gameNumber: 1,
+              winner: winningTeam[0].id, // Use first player of winning team as representative
+              scores
             };
             
             return {
               ...match,
               isComplete: true,
-              winner: winner.id,
+              winner: winningTeam[0].id,
               games: [gameResult]
             };
           }
@@ -471,16 +498,37 @@ export const useTournament = create<TournamentState>()(
         const allComplete = currentRoundMatches.every(m => m.isComplete);
         if (!allComplete) return;
         
-        // Advance to next round
-        const winners = currentRoundMatches.map(match => {
-          const winnerId = match.winner;
-          return match.players.find(p => p.id === winnerId)!;
+        // Advance to next round - handle team tournaments correctly
+        const winners: TournamentPlayer[] = [];
+        const gameMode = state.currentTournament.type;
+        
+        currentRoundMatches.forEach(match => {
+          if (gameMode === '1v1') {
+            // 1v1: advance individual winner
+            const winnerId = match.winner;
+            const winner = match.players.find(p => p.id === winnerId)!;
+            winners.push(winner);
+          } else {
+            // Team tournaments: advance entire winning team
+            const teamSize = gameMode === '2v2' ? 2 : 3;
+            const winnerId = match.winner;
+            const winnerPlayer = match.players.find(p => p.id === winnerId)!;
+            const winnerIndex = match.players.indexOf(winnerPlayer);
+            const teamStartIndex = Math.floor(winnerIndex / teamSize) * teamSize;
+            const winningTeam = match.players.slice(teamStartIndex, teamStartIndex + teamSize);
+            winners.push(...winningTeam);
+          }
         });
         
-        if (winners.length === 1) {
-          // Tournament finished
-          const winner = winners[0];
-          if (winner.isPlayer) {
+        // Check if tournament is finished based on game mode
+        const isFinished = gameMode === '1v1' ? winners.length === 1 : 
+                          gameMode === '2v2' ? winners.length === 2 : 
+                          winners.length === 3;
+        
+        if (isFinished) {
+          // Tournament finished - check if player's team won
+          const playerWon = winners.some(w => w.isPlayer);
+          if (playerWon) {
             // Player won the tournament! Award title based on actual rank
             // The title will be awarded in completeTournamentGame when the final match completes
           }
@@ -512,13 +560,16 @@ export const useTournament = create<TournamentState>()(
         if (!nextRound) return;
         
         const nextMatches: TournamentMatch[] = [];
-        for (let i = 0; i < winners.length; i += 2) {
-          if (i + 1 < winners.length) {
+        const playersPerMatch = gameMode === '1v1' ? 2 : gameMode === '2v2' ? 4 : 6;
+        
+        for (let i = 0; i < winners.length; i += playersPerMatch) {
+          if (i + playersPerMatch - 1 < winners.length) {
+            const matchPlayers = winners.slice(i, i + playersPerMatch);
             const bestOf = 1; // Simplified: All tournament matches are best of 1
             nextMatches.push({
-              id: `${nextRound}-${i / 2}`,
+              id: `${nextRound}-${i / playersPerMatch}`,
               round: nextRound,
-              players: [winners[i], winners[i + 1]],
+              players: matchPlayers,
               games: [],
               isComplete: false,
               winner: null,
@@ -701,20 +752,53 @@ export const useTournament = create<TournamentState>()(
           const opponent = match.players.find(p => !p.isPlayer)!;
           opponents = [{ name: opponent.name, mmr: opponent.mmr, isTeammate: false }];
         } else if (gameMode === '2v2') {
-          // 2v2: player + AI teammate vs 2 AI opponents - use exact names from bracket
-          const opponentTeam = match.players.filter(p => !p.isPlayer);
-          opponents = [
-            { name: 'Teammate AI', mmr: 2500, isTeammate: true },
-            ...opponentTeam.map(p => ({ name: p.name, mmr: p.mmr, isTeammate: false }))
-          ];
+          // 2v2: For team games, we need to properly organize teams
+          // Match should have 4 players: player + 1 teammate vs 2 opponents
+          const playerIndex = match.players.findIndex(p => p.isPlayer);
+          const teamSize = 2;
+          const isPlayerInTeam1 = playerIndex < teamSize;
+          
+          if (isPlayerInTeam1) {
+            // Player is in team 1 (first 2 players)
+            const teammate = match.players[1]; // Teammate (2nd player in first team)
+            const enemyTeam = match.players.slice(2, 4); // Enemy team (players 3-4)
+            opponents = [
+              { name: teammate.name, mmr: teammate.mmr, isTeammate: true },
+              ...enemyTeam.map(p => ({ name: p.name, mmr: p.mmr, isTeammate: false }))
+            ];
+          } else {
+            // Player is in team 2 (last 2 players)
+            const teammate = match.players[3]; // Teammate (2nd player in second team)
+            const enemyTeam = match.players.slice(0, 2); // Enemy team (players 1-2)
+            opponents = [
+              { name: teammate.name, mmr: teammate.mmr, isTeammate: true },
+              ...enemyTeam.map(p => ({ name: p.name, mmr: p.mmr, isTeammate: false }))
+            ];
+          }
         } else if (gameMode === '3v3') {
-          // 3v3: player + 2 AI teammates vs 3 AI opponents - use exact names from bracket
-          const opponentTeam = match.players.filter(p => !p.isPlayer);
-          opponents = [
-            { name: 'Teammate AI 1', mmr: 2500, isTeammate: true },
-            { name: 'Teammate AI 2', mmr: 2500, isTeammate: true },
-            ...opponentTeam.map(p => ({ name: p.name, mmr: p.mmr, isTeammate: false }))
-          ];
+          // 3v3: For team games, we need to properly organize teams
+          // Match should have 6 players: player + 2 teammates vs 3 opponents
+          const playerIndex = match.players.findIndex(p => p.isPlayer);
+          const teamSize = 3;
+          const isPlayerInTeam1 = playerIndex < teamSize;
+          
+          if (isPlayerInTeam1) {
+            // Player is in team 1 (first 3 players)
+            const teammates = match.players.slice(0, 3).filter(p => !p.isPlayer);
+            const enemyTeam = match.players.slice(3, 6); // Enemy team (players 4-6)
+            opponents = [
+              ...teammates.map(p => ({ name: p.name, mmr: p.mmr, isTeammate: true })),
+              ...enemyTeam.map(p => ({ name: p.name, mmr: p.mmr, isTeammate: false }))
+            ];
+          } else {
+            // Player is in team 2 (last 3 players)
+            const teammates = match.players.slice(3, 6).filter(p => !p.isPlayer);
+            const enemyTeam = match.players.slice(0, 3); // Enemy team (players 1-3)
+            opponents = [
+              ...teammates.map(p => ({ name: p.name, mmr: p.mmr, isTeammate: true })),
+              ...enemyTeam.map(p => ({ name: p.name, mmr: p.mmr, isTeammate: false }))
+            ];
+          }
         }
         
         // Import the game state store

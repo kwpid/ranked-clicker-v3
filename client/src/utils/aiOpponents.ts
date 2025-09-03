@@ -196,9 +196,8 @@ export function simulateAIClicks(aiMMR: number, playerCPS: number): number {
     // Champion level - 8-10 CPS
     baseCPS = 8 + Math.random() * 2;
   } else {
-    // Grand Champion - 9-12 CPS (switch between max and min as requested)
-    baseCPS = Math.random() < 0.5 ? 9 : 12; // 50/50 chance between min and max
-    baseCPS += (Math.random() - 0.5) * 0.5; // Small variation around the chosen value
+    // Grand Champion - 10-14 CPS (should be 10+ as requested)
+    baseCPS = 10 + Math.random() * 4; // 10-14 CPS range
   }
   
   // Add slight natural variation
