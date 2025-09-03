@@ -239,9 +239,10 @@ export function GameScreen() {
                   additionalClicks = -2;
                 }
               } else {
-                // Normal AI clicking using the AI's own MMR and player's current CPS
+                // Normal AI clicking - in tournaments use player's MMR for consistent difficulty
+                const aiMMR = queueMode === 'tournament' ? playerData.mmr[gameMode!] : ((opponent as any).mmr || playerData.mmr[gameMode!]);
                 additionalClicks = simulateAIClicks(
-                  (opponent as any).mmr || playerData.mmr[gameMode!], 
+                  aiMMR, 
                   Math.max(1, currentPlayerCPS) // Ensure minimum CPS of 1 for calculation
                 );
               }
@@ -414,7 +415,7 @@ export function GameScreen() {
       isTeammate: true,
       hasForfeited: false,
       title: playerTitle,
-      mmr: playerData.mmr[gameMode!]
+      mmr: queueMode === 'tournament' ? undefined : playerData.mmr[gameMode!] // Hide MMR in tournaments
     },
     ...gameState.opponents.filter(o => o.isTeammate).map(opponent => ({
       name: opponent.name,
@@ -424,7 +425,7 @@ export function GameScreen() {
       isPlayer: false,
       hasForfeited: opponent.hasForfeited || false,
       title: (opponent as any).title || undefined,
-      mmr: (opponent as any).mmr || undefined
+      mmr: queueMode === 'tournament' ? undefined : (opponent as any).mmr // Hide MMR in tournaments
     }))
   ];
   const opponentTeam = gameState.opponents.filter(o => !o.isTeammate).map(opponent => ({
@@ -435,7 +436,7 @@ export function GameScreen() {
     isPlayer: false,
     hasForfeited: opponent.hasForfeited || false,
     title: opponent.title,
-    mmr: opponent.mmr
+    mmr: queueMode === 'tournament' ? undefined : opponent.mmr // Hide MMR in tournaments
   }));
 
   return (

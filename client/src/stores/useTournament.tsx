@@ -400,7 +400,7 @@ export const useTournament = create<TournamentState>()(
           if (i + playersPerMatch - 1 < shuffledPlayers.length) {
             const matchPlayers = shuffledPlayers.slice(i, i + playersPerMatch);
             matches.push({
-              id: `round1-${i / playersPerMatch}`,
+              id: `round1-${i / playersPerMatch}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`, // Ensure unique IDs
               round: 'round1',
               players: matchPlayers,
               games: [],
@@ -583,7 +583,7 @@ export const useTournament = create<TournamentState>()(
             const matchPlayers = winners.slice(i, i + playersPerMatch);
             const bestOf = 1; // Simplified: All tournament matches are best of 1
             nextMatches.push({
-              id: `${nextRound}-${i / playersPerMatch}`,
+              id: `${nextRound}-${i / playersPerMatch}-${Date.now()}`, // Add timestamp to ensure uniqueness
               round: nextRound,
               players: matchPlayers,
               games: [],
@@ -816,9 +816,6 @@ export const useTournament = create<TournamentState>()(
             ];
           }
         }
-        
-        // Debug log for Synergy Cup
-        console.log('🏆 Tournament match setup:', { tournamentType, matchId, opponentsCount: opponents.length, opponents });
         
         // Import the game state store
         import('../stores/useGameState').then(({ useGameState }) => {
