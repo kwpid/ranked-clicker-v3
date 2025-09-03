@@ -760,14 +760,14 @@ export const useTournament = create<TournamentState>()(
         if (!match || match.isComplete || !match.players.some(p => p.isPlayer)) return;
         
         // Convert tournament players to game opponents format
-        const gameMode = state.currentTournament.type;
+        const tournamentType = state.currentTournament.type;
         let opponents: Array<{ name: string; mmr: number; isTeammate: boolean }> = [];
         
-        if (gameMode === '1v1') {
+        if (tournamentType === '1v1') {
           // 1v1: just the opponent - use exact name from bracket
           const opponent = match.players.find(p => !p.isPlayer)!;
           opponents = [{ name: opponent.name, mmr: opponent.mmr, isTeammate: false }];
-        } else if (gameMode === '2v2') {
+        } else if (tournamentType === '2v2' || tournamentType === 'synergy-cup') {
           // 2v2: For team games, we need to properly organize teams
           // Match should have 4 players: player + 1 teammate vs 2 opponents
           const playerIndex = match.players.findIndex(p => p.isPlayer);
@@ -791,7 +791,7 @@ export const useTournament = create<TournamentState>()(
               ...enemyTeam.map(p => ({ name: p.name, mmr: p.mmr, isTeammate: false }))
             ];
           }
-        } else if (gameMode === '3v3') {
+        } else if (tournamentType === '3v3') {
           // 3v3: For team games, we need to properly organize teams
           // Match should have 6 players: player + 2 teammates vs 3 opponents
           const playerIndex = match.players.findIndex(p => p.isPlayer);
@@ -816,6 +816,9 @@ export const useTournament = create<TournamentState>()(
             ];
           }
         }
+        
+        // Debug log for Synergy Cup
+        console.log('🏆 Tournament match setup:', { tournamentType, matchId, opponentsCount: opponents.length, opponents });
         
         // Import the game state store
         import('../stores/useGameState').then(({ useGameState }) => {
