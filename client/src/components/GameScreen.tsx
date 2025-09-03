@@ -17,7 +17,7 @@ interface GameState {
   playerScore: number;
   teamScore: number;
   opponentTeamScore: number;
-  opponents: Array<{ name: string; score: number; isAI: boolean; isTeammate: boolean; hasForfeited?: boolean }>;
+  opponents: Array<{ name: string; score: number; isAI: boolean; isTeammate: boolean; hasForfeited?: boolean; title?: string; mmr?: number }>;
   dontClickMode: boolean;
   dontClickStartTime: number;
 }
@@ -43,6 +43,10 @@ export function GameScreen() {
     // Random game time between 30-50 seconds for realistic AI game completion
     return 30 + Math.floor(Math.random() * 21);
   });
+
+  // Track player's CPS
+  const [playerClickTimes, setPlayerClickTimes] = useState<number[]>([]);
+  const [currentPlayerCPS, setCurrentPlayerCPS] = useState(0);
 
   // Set page title when game starts
   useEffect(() => {
@@ -99,6 +103,14 @@ export function GameScreen() {
           ...prev,
           playerScore: prev.playerScore + 1
         }));
+        
+        // Track click time for CPS calculation
+        const now = Date.now();
+        setPlayerClickTimes(prev => {
+          const newTimes = [...prev, now];
+          // Keep only clicks from the last 2 seconds for CPS calculation
+          return newTimes.filter(time => now - time <= 2000);
+        });
       }
     }
   }, [gameState.phase, gameState.dontClickMode]);
@@ -145,6 +157,25 @@ export function GameScreen() {
     return () => {
       if (interval) clearInterval(interval);
     };
+  }, [gameState.phase]);
+
+  // Calculate player's CPS
+  useEffect(() => {
+    if (gameState.phase === 'playing') {
+      const cpsInterval = setInterval(() => {
+        const now = Date.now();
+        setPlayerClickTimes(prev => {
+          // Keep only clicks from the last 2 seconds
+          const recentClicks = prev.filter(time => now - time <= 2000);
+          // Calculate CPS (clicks per second)
+          const cps = recentClicks.length / 2;
+          setCurrentPlayerCPS(cps);
+          return recentClicks;
+        });
+      }, 100);
+
+      return () => clearInterval(cpsInterval);
+    }
   }, [gameState.phase]);
 
   // Don't click mode logic
@@ -208,8 +239,11 @@ export function GameScreen() {
                   additionalClicks = -2;
                 }
               } else {
-                // Normal AI clicking using the AI's own MMR
-                additionalClicks = simulateAIClicks((opponent as any).mmr || playerData.mmr[gameMode!]);
+                // Normal AI clicking using the AI's own MMR and player's current CPS
+                additionalClicks = simulateAIClicks(
+                  (opponent as any).mmr || playerData.mmr[gameMode!], 
+                  Math.max(1, currentPlayerCPS) // Ensure minimum CPS of 1 for calculation
+                );
               }
               
               return { ...opponent, score: Math.max(0, opponent.score + additionalClicks) };

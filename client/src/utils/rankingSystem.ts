@@ -90,27 +90,41 @@ export function calculateMMRChange(
 ): number {
   const averageOpponentMMR = opponentMMRs.reduce((sum, mmr) => sum + mmr, 0) / opponentMMRs.length;
   
-  // Base MMR change
-  let baseChange = isWin ? 25 : -25;
-  
-  // Adjust based on MMR difference
+  // ELO-style calculation
   const mmrDifference = averageOpponentMMR - currentMMR;
-  const difficultyMultiplier = 1 + (mmrDifference / 1000); // +/- 100 MMR = +/- 10% change
   
-  // Apply multiplier
-  baseChange = Math.floor(baseChange * difficultyMultiplier);
+  // Calculate expected score (probability of winning)
+  const expectedScore = 1 / (1 + Math.pow(10, mmrDifference / 400));
   
-  // Ensure minimum change
-  if (isWin) {
-    baseChange = Math.max(5, baseChange);
-  } else {
-    baseChange = Math.min(-5, baseChange);
+  // Actual score (1 for win, 0 for loss)
+  const actualScore = isWin ? 1 : 0;
+  
+  // K-factor determines maximum MMR change (between 10-30)
+  let kFactor = 30;
+  
+  // Reduce K-factor for higher MMR players (more stable at high ranks)
+  if (currentMMR > 1900) {
+    kFactor = 15; // Grand Champion
+  } else if (currentMMR > 1600) {
+    kFactor = 20; // Champion
+  } else if (currentMMR > 1000) {
+    kFactor = 25; // Diamond/Platinum
   }
   
-  // Cap maximum change
-  baseChange = Math.max(-50, Math.min(50, baseChange));
+  // Calculate MMR change
+  const mmrChange = Math.round(kFactor * (actualScore - expectedScore));
   
-  return baseChange;
+  // Ensure minimum and maximum bounds (10-30)
+  const clampedChange = Math.max(-30, Math.min(30, mmrChange));
+  
+  // Ensure minimum change of 10 for any game
+  if (isWin && clampedChange < 10) {
+    return 10;
+  } else if (!isWin && clampedChange > -10) {
+    return -10;
+  }
+  
+  return clampedChange;
 }
 
 export function shouldStartNewSeason(): boolean {

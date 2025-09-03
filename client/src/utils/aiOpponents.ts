@@ -106,29 +106,60 @@ function getRandomAITitle(aiMMR: number): string {
     }
   }
   
-  // Weight the probabilities - level titles more common, season/tournament titles rarer
+  // Weight the probabilities based on rank - higher ranks prefer season/tournament titles
   const titleCategories = [];
   
-  // Always include level titles (60% weight)
-  for (let i = 0; i < 6; i++) {
-    titleCategories.push(...LEVEL_TITLES);
-  }
-  
-  // Season titles (30% weight) - only if AI has appropriate rank
-  if (SEASON_TITLES.length > 0) {
-    for (let i = 0; i < 3; i++) {
-      titleCategories.push(...SEASON_TITLES);
+  if (aiRankIndex <= 2) {
+    // Bronze/Silver/Gold - mostly level titles (80%), some season titles (20%)
+    for (let i = 0; i < 8; i++) {
+      titleCategories.push(...LEVEL_TITLES);
+    }
+    if (SEASON_TITLES.length > 0) {
+      for (let i = 0; i < 2; i++) {
+        titleCategories.push(...SEASON_TITLES);
+      }
+    }
+  } else if (aiRankIndex <= 4) {
+    // Platinum/Diamond - balanced (50% level, 40% season, 10% tournament)
+    for (let i = 0; i < 5; i++) {
+      titleCategories.push(...LEVEL_TITLES);
+    }
+    if (SEASON_TITLES.length > 0) {
+      for (let i = 0; i < 4; i++) {
+        titleCategories.push(...SEASON_TITLES);
+      }
+    }
+    if (TOURNAMENT_TITLES.length > 0) {
+      titleCategories.push(...TOURNAMENT_TITLES);
+    }
+  } else {
+    // Champion/Grand Champion - prefer prestigious titles (20% level, 50% season, 30% tournament)
+    for (let i = 0; i < 2; i++) {
+      titleCategories.push(...LEVEL_TITLES);
+    }
+    if (SEASON_TITLES.length > 0) {
+      for (let i = 0; i < 5; i++) {
+        titleCategories.push(...SEASON_TITLES);
+      }
+    }
+    if (TOURNAMENT_TITLES.length > 0) {
+      for (let i = 0; i < 3; i++) {
+        titleCategories.push(...TOURNAMENT_TITLES);
+      }
+    }
+    
+    // Higher tier champions can occasionally have Grand Champion rewards
+    if (aiRankIndex === 5 && Math.random() < 0.2) { // Champion with 20% chance
+      for (let season = 1; season <= currentSeason; season++) {
+        titleCategories.push(`S${season} GRAND CHAMPION`);
+      }
     }
   }
   
-  // Tournament titles (10% weight) - only if AI has appropriate rank
-  if (TOURNAMENT_TITLES.length > 0) {
-    titleCategories.push(...TOURNAMENT_TITLES);
-  }
-  
-  // 40% chance for no title, 60% chance for a title
-  if (Math.random() < 0.4) {
-    return '';
+  // AI must always have a title (like players)
+  if (titleCategories.length === 0) {
+    // Fallback to a level title if no other titles available
+    return LEVEL_TITLES[Math.floor(Math.random() * LEVEL_TITLES.length)];
   }
   
   return titleCategories[Math.floor(Math.random() * titleCategories.length)];
@@ -143,37 +174,48 @@ function generateOpponentMMR(playerMMR: number, isTeammate: boolean): number {
   return Math.floor(Math.random() * (maxMMR - minMMR + 1)) + minMMR;
 }
 
-export function simulateAIClicks(aiMMR: number): number {
-  // AI clicking rate based on their own MMR/difficulty with realistic variation
-  let baseCPS = 0;
+export function simulateAIClicks(aiMMR: number, playerCPS: number): number {
+  // AI clicking rate based on player's CPS and their rank relative to player
+  
+  // Calculate rank-based multiplier
+  let skillMultiplier = 1.0;
   
   if (aiMMR < 400) {
-    // Bronze level - 2-4 CPS with occasional bursts
-    baseCPS = Math.random() < 0.05 ? 6 + Math.random() * 3 : 2 + Math.random() * 2; // Usually 2-4, rarely 6-9
+    // Bronze level - clicks 60-85% of player's rate
+    skillMultiplier = 0.6 + Math.random() * 0.25;
   } else if (aiMMR < 700) {
-    // Silver level - 3-5 CPS with occasional bursts
-    baseCPS = Math.random() < 0.08 ? 7 + Math.random() * 3 : 3 + Math.random() * 2; // Usually 3-5, rarely 7-10
+    // Silver level - clicks 70-90% of player's rate
+    skillMultiplier = 0.7 + Math.random() * 0.2;
   } else if (aiMMR < 1000) {
-    // Gold level - 4-6 CPS with occasional bursts
-    baseCPS = Math.random() < 0.1 ? 8 + Math.random() * 3 : 4 + Math.random() * 2; // Usually 4-6, rarely 8-11
+    // Gold level - clicks 75-95% of player's rate
+    skillMultiplier = 0.75 + Math.random() * 0.2;
   } else if (aiMMR < 1300) {
-    // Platinum level - 5-7 CPS with occasional bursts
-    baseCPS = Math.random() < 0.12 ? 9 + Math.random() * 3 : 5 + Math.random() * 2; // Usually 5-7, rarely 9-12
+    // Platinum level - clicks 80-100% of player's rate
+    skillMultiplier = 0.8 + Math.random() * 0.2;
   } else if (aiMMR < 1600) {
-    // Diamond level - 6-8 CPS with bursts
-    baseCPS = Math.random() < 0.15 ? 10 + Math.random() * 3 : 6 + Math.random() * 2; // Usually 6-8, sometimes 10-13
+    // Diamond level - clicks 85-105% of player's rate
+    skillMultiplier = 0.85 + Math.random() * 0.2;
   } else if (aiMMR < 1900) {
-    // Champion level - 7-10 CPS with bursts
-    baseCPS = Math.random() < 0.18 ? 11 + Math.random() * 3 : 7 + Math.random() * 3; // Usually 7-10, sometimes 11-14
+    // Champion level - clicks 90-110% of player's rate
+    skillMultiplier = 0.9 + Math.random() * 0.2;
   } else {
-    // Grand Champion - 9-13 CPS with occasional drops to human-like patterns
-    const isLowPerformance = Math.random() < 0.15; // 15% chance of lower performance
-    baseCPS = isLowPerformance ? 6 + Math.random() * 4 : 9 + Math.random() * 4; // Usually 9-13, sometimes 6-10
+    // Grand Champion - clicks 95-115% of player's rate, sometimes much higher bursts
+    const hasBurst = Math.random() < 0.15; // 15% chance of burst clicking
+    skillMultiplier = hasBurst ? 1.2 + Math.random() * 0.3 : 0.95 + Math.random() * 0.2;
   }
   
-  // Convert CPS to clicks per 100ms interval with more realistic timing
-  const clicksPerInterval = (baseCPS / 10) * (0.9 + Math.random() * 0.2); // Less randomness for consistency
+  // Calculate target CPS based on player's performance
+  let targetCPS = playerCPS * skillMultiplier;
   
-  // Return integer clicks (can be 0, represents realistic clicking patterns)
-  return Math.floor(clicksPerInterval + (Math.random() > 0.7 ? 1 : 0)); // Slight boost occasionally
+  // Add some natural variation
+  targetCPS *= (0.9 + Math.random() * 0.2);
+  
+  // Ensure minimum reasonable CPS
+  targetCPS = Math.max(1, targetCPS);
+  
+  // Convert CPS to clicks per 100ms interval
+  const clicksPerInterval = (targetCPS / 10);
+  
+  // Return integer clicks with slight randomness
+  return Math.floor(clicksPerInterval + (Math.random() > 0.6 ? 1 : 0));
 }
