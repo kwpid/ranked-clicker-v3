@@ -8,6 +8,8 @@ import { LeaderboardScreen } from './LeaderboardScreen';
 import { TournamentScreen } from './TournamentScreen';
 import { TournamentBracket } from './TournamentBracket';
 import { TournamentBanner } from './TournamentBanner';
+import NewsScreen from './NewsScreen';
+import NewsModal from './NewsModal';
 import { useGameState } from '../stores/useGameState';
 
 export function GameLayout() {
@@ -27,6 +29,8 @@ export function GameLayout() {
         return <TournamentScreen />;
       case 'tournament-bracket':
         return <TournamentBracket />;
+      case 'news':
+        return <NewsScreen />;
       default:
         return <MainMenu />;
     }
@@ -36,12 +40,13 @@ export function GameLayout() {
     <div className="min-h-screen bg-gray-900 text-white">
       <TournamentBanner />
       <div className="container mx-auto px-4 py-6">
-        {currentScreen !== 'queue' && currentScreen !== 'game' && currentScreen !== 'leaderboard' && currentScreen !== 'tournaments' && currentScreen !== 'tournament-bracket' && <PlayerCard />}
-        <div className={currentScreen !== 'queue' && currentScreen !== 'game' && currentScreen !== 'leaderboard' && currentScreen !== 'tournaments' && currentScreen !== 'tournament-bracket' ? 'mt-6' : ''}>
+        {currentScreen !== 'queue' && currentScreen !== 'game' && currentScreen !== 'leaderboard' && currentScreen !== 'tournaments' && currentScreen !== 'tournament-bracket' && currentScreen !== 'news' && <PlayerCard />}
+        <div className={currentScreen !== 'queue' && currentScreen !== 'game' && currentScreen !== 'leaderboard' && currentScreen !== 'tournaments' && currentScreen !== 'tournament-bracket' && currentScreen !== 'news' ? 'mt-6' : ''}>
           {renderScreen()}
         </div>
       </div>
       {showStatsModal && <StatsScreen />}
+      <NewsModal />
     </div>
   );
 }

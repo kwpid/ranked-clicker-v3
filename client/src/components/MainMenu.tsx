@@ -1,13 +1,28 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useGameState } from '../stores/useGameState';
 import { useTournament } from '../stores/useTournament';
+import { useNews } from '../stores/useNews';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Trophy, Users, Zap, Crown } from 'lucide-react';
+import { Badge } from './ui/badge';
+import { Trophy, Users, Zap, Crown, Newspaper, Bell } from 'lucide-react';
 
 export function MainMenu() {
   const { setQueueMode, setCurrentScreen } = useGameState();
   const { isGameModeBlocked } = useTournament();
+  const { getUnreadCount, versionInfo, checkForUpdates, dismissUpdate } = useNews();
+
+  const unreadCount = getUnreadCount();
+
+  useEffect(() => {
+    // Check for updates when the main menu loads
+    const checkInterval = 60 * 60 * 1000; // 1 hour
+    const now = Date.now();
+    
+    if (now - versionInfo.lastChecked > checkInterval) {
+      checkForUpdates();
+    }
+  }, [checkForUpdates, versionInfo.lastChecked]);
 
   const handleQueueSelection = (mode: 'casual' | 'ranked') => {
     if (isGameModeBlocked()) return; // Block if in tournament queue
@@ -84,9 +99,67 @@ export function MainMenu() {
         </Card>
       </div>
 
+      {/* Update Notification */}
+      {versionInfo.hasUpdate && (
+        <div className="mt-6">
+          <Card className="bg-yellow-900/20 border-yellow-500/30">
+            <CardContent className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <Bell className="w-5 h-5 text-yellow-400 animate-bounce" />
+                <div>
+                  <p className="font-semibold text-yellow-400 text-sm">
+                    Update Available: v{versionInfo.latestVersion}
+                  </p>
+                  <p className="text-xs text-yellow-300/80">
+                    New features and improvements available
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => window.open('https://github.com/user/ranked-clicker-game/releases', '_blank')}
+                  size="sm"
+                  className="bg-yellow-600 hover:bg-yellow-700 text-xs"
+                >
+                  Update
+                </Button>
+                <Button
+                  onClick={dismissUpdate}
+                  size="sm"
+                  variant="ghost"
+                  className="text-yellow-400 hover:bg-yellow-900/30 text-xs"
+                >
+                  Dismiss
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Secondary Options */}
-      <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center">
-        <Card className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border-yellow-600/30 hover:border-yellow-500/50 transition-all duration-300 cursor-pointer group flex-1 max-w-xs"
+      <div className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
+        <Card className="bg-gradient-to-r from-blue-900/20 to-indigo-900/20 border-blue-600/30 hover:border-blue-500/50 transition-all duration-300 cursor-pointer group"
+              onClick={() => setCurrentScreen('news')}>
+          <CardHeader className="text-center pb-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-2 group-hover:from-blue-500 group-hover:to-indigo-500 transition-all shadow-lg shadow-blue-500/25 relative">
+              <Newspaper className="w-5 h-5 text-white" />
+              {unreadCount > 0 && (
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-red-500 text-white text-xs">
+                  {unreadCount}
+                </Badge>
+              )}
+            </div>
+            <CardTitle className="text-base text-blue-400">News</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center pt-0">
+            <p className="text-gray-400 text-xs">
+              {unreadCount > 0 ? `${unreadCount} new updates` : 'Latest updates'}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border-yellow-600/30 hover:border-yellow-500/50 transition-all duration-300 cursor-pointer group"
               onClick={() => setCurrentScreen('leaderboard')}>
           <CardHeader className="text-center pb-3">
             <div className="w-10 h-10 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-2 group-hover:from-yellow-500 group-hover:to-orange-500 transition-all shadow-lg shadow-yellow-500/25">
@@ -101,7 +174,7 @@ export function MainMenu() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-red-900/20 to-pink-900/20 border-red-600/30 hover:border-red-500/50 transition-all duration-300 cursor-pointer group flex-1 max-w-xs"
+        <Card className="bg-gradient-to-r from-red-900/20 to-pink-900/20 border-red-600/30 hover:border-red-500/50 transition-all duration-300 cursor-pointer group"
               onClick={() => setCurrentScreen('tournaments')}>
           <CardHeader className="text-center pb-3">
             <div className="w-10 h-10 bg-gradient-to-r from-red-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-2 group-hover:from-red-500 group-hover:to-pink-500 transition-all shadow-lg shadow-red-500/25">
