@@ -520,10 +520,10 @@ export const useTournament = create<TournamentState>()(
           }
         });
         
-        // Check if tournament is finished based on game mode
-        const isFinished = gameMode === '1v1' ? winners.length === 1 : 
-                          gameMode === '2v2' ? winners.length === 2 : 
-                          winners.length === 3;
+        // Check if tournament is finished based on game mode - handle all tournament types including Synergy Cup
+        const teamSize = gameMode === '1v1' ? 1 : gameMode === '2v2' || gameMode === 'synergy-cup' ? 2 : 3;
+        const teamsRemaining = winners.length / teamSize;
+        const isFinished = teamsRemaining === 1;
         
         if (isFinished) {
           // Tournament finished - check if player's team won
@@ -542,19 +542,35 @@ export const useTournament = create<TournamentState>()(
           return;
         }
         
-        // Create next round
-        // Dynamic round progression based on remaining players
+        // Create next round - improved logic for large tournaments like Synergy Cup
         let nextRound: BracketRound;
-        if (winners.length === 4) {
-          nextRound = 'semifinal';
-        } else if (winners.length === 2) {
+        const currentRound = state.currentTournament.currentRound;
+        
+        if (teamsRemaining === 1) {
+          // Tournament should be finished - this is handled above
+          return;
+        } else if (teamsRemaining === 2) {
           nextRound = 'final';
-        } else if (winners.length > 4) {
-          nextRound = 'round2';
-        } else if (winners.length > 2) {
+        } else if (teamsRemaining === 4) {
+          nextRound = 'semifinal';
+        } else if (teamsRemaining === 6) {
+          // Special case: 6 teams need to go to 4, then semifinal
           nextRound = 'round3';
+        } else if (teamsRemaining <= 8) {
+          nextRound = 'round3';
+        } else if (teamsRemaining <= 16) {
+          nextRound = 'round2';
         } else {
-          return; // Tournament should be finished
+          // For very large tournaments, continue with sequential rounds
+          if (currentRound === 'round1') {
+            nextRound = 'round2';
+          } else if (currentRound === 'round2') {
+            nextRound = 'round3';
+          } else if (currentRound === 'round3') {
+            nextRound = 'semifinal';
+          } else {
+            nextRound = 'final';
+          }
         }
         
         if (!nextRound) return;
