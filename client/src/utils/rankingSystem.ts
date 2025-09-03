@@ -36,7 +36,7 @@ const RANK_COLORS = {
   'Platinum': '#E5E4E2',
   'Diamond': '#B9F2FF',
   'Champion': '#9966CC',
-  'Grand Champion': '#FF6B6B',
+  'Grand Champion': '#FFD700',
 };
 
 export function getRankInfo(mmr: number): RankInfo {

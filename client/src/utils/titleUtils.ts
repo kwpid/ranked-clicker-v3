@@ -58,6 +58,12 @@ function getRankColor(rank: string): string {
   };
   
   const upperRank = rank.toUpperCase();
+  
+  // Check for Grand Champion first to avoid matching "CHAMPION" instead
+  if (upperRank.includes('GRAND CHAMPION')) {
+    return RANK_COLORS['GRAND CHAMPION'];
+  }
+  
   for (const [rankName, color] of Object.entries(RANK_COLORS)) {
     if (upperRank.includes(rankName)) {
       return color;

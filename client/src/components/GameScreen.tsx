@@ -208,8 +208,8 @@ export function GameScreen() {
                   additionalClicks = -2;
                 }
               } else {
-                // Normal AI clicking
-                additionalClicks = simulateAIClicks(playerData.mmr[gameMode!]);
+                // Normal AI clicking using the AI's own MMR
+                additionalClicks = simulateAIClicks((opponent as any).mmr || playerData.mmr[gameMode!]);
               }
               
               return { ...opponent, score: Math.max(0, opponent.score + additionalClicks) };

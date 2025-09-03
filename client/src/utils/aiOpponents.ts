@@ -143,37 +143,37 @@ function generateOpponentMMR(playerMMR: number, isTeammate: boolean): number {
   return Math.floor(Math.random() * (maxMMR - minMMR + 1)) + minMMR;
 }
 
-export function simulateAIClicks(playerMMR: number): number {
-  // AI clicking rate based on MMR/difficulty
+export function simulateAIClicks(aiMMR: number): number {
+  // AI clicking rate based on their own MMR/difficulty with realistic variation
   let baseCPS = 0;
   
-  if (playerMMR < 400) {
-    // Bronze level - very low CPS
-    baseCPS = 1.5 + Math.random() * 1.0; // 1.5-2.5 CPS
-  } else if (playerMMR < 700) {
-    // Silver level - low CPS
-    baseCPS = 2.0 + Math.random() * 1.5; // 2.0-3.5 CPS
-  } else if (playerMMR < 1000) {
-    // Gold level - moderate CPS
-    baseCPS = 2.5 + Math.random() * 2.0; // 2.5-4.5 CPS
-  } else if (playerMMR < 1300) {
-    // Platinum level - high CPS
-    baseCPS = 3.0 + Math.random() * 2.5; // 3.0-5.5 CPS
-  } else if (playerMMR < 1600) {
-    // Diamond level - very high CPS
-    baseCPS = 4.0 + Math.random() * 3.0; // 4.0-7.0 CPS
-  } else if (playerMMR < 1900) {
-    // Champion level - near-human patterns
-    baseCPS = 5.0 + Math.random() * 4.0; // 5.0-9.0 CPS
+  if (aiMMR < 400) {
+    // Bronze level - 2-4 CPS with occasional bursts
+    baseCPS = Math.random() < 0.05 ? 6 + Math.random() * 3 : 2 + Math.random() * 2; // Usually 2-4, rarely 6-9
+  } else if (aiMMR < 700) {
+    // Silver level - 3-5 CPS with occasional bursts
+    baseCPS = Math.random() < 0.08 ? 7 + Math.random() * 3 : 3 + Math.random() * 2; // Usually 3-5, rarely 7-10
+  } else if (aiMMR < 1000) {
+    // Gold level - 4-6 CPS with occasional bursts
+    baseCPS = Math.random() < 0.1 ? 8 + Math.random() * 3 : 4 + Math.random() * 2; // Usually 4-6, rarely 8-11
+  } else if (aiMMR < 1300) {
+    // Platinum level - 5-7 CPS with occasional bursts
+    baseCPS = Math.random() < 0.12 ? 9 + Math.random() * 3 : 5 + Math.random() * 2; // Usually 5-7, rarely 9-12
+  } else if (aiMMR < 1600) {
+    // Diamond level - 6-8 CPS with bursts
+    baseCPS = Math.random() < 0.15 ? 10 + Math.random() * 3 : 6 + Math.random() * 2; // Usually 6-8, sometimes 10-13
+  } else if (aiMMR < 1900) {
+    // Champion level - 7-10 CPS with bursts
+    baseCPS = Math.random() < 0.18 ? 11 + Math.random() * 3 : 7 + Math.random() * 3; // Usually 7-10, sometimes 11-14
   } else {
-    // Grand Champion - human-like with bursts
-    const isBurst = Math.random() < 0.1; // 10% chance of burst
-    baseCPS = isBurst ? 8.0 + Math.random() * 7.0 : 4.0 + Math.random() * 5.0;
+    // Grand Champion - 9-13 CPS with occasional drops to human-like patterns
+    const isLowPerformance = Math.random() < 0.15; // 15% chance of lower performance
+    baseCPS = isLowPerformance ? 6 + Math.random() * 4 : 9 + Math.random() * 4; // Usually 9-13, sometimes 6-10
   }
   
-  // Convert CPS to clicks per 100ms interval
-  const clicksPerInterval = (baseCPS / 10) * (0.8 + Math.random() * 0.4); // Add some randomness
+  // Convert CPS to clicks per 100ms interval with more realistic timing
+  const clicksPerInterval = (baseCPS / 10) * (0.9 + Math.random() * 0.2); // Less randomness for consistency
   
-  // Return integer clicks (can be 0)
-  return Math.floor(clicksPerInterval + Math.random());
+  // Return integer clicks (can be 0, represents realistic clicking patterns)
+  return Math.floor(clicksPerInterval + (Math.random() > 0.7 ? 1 : 0)); // Slight boost occasionally
 }
