@@ -3,6 +3,7 @@ import { useGameState } from '../stores/useGameState';
 import { usePlayerData } from '../stores/usePlayerData';
 import { getOnlinePlayerCount, estimateQueueTime } from '../utils/gameLogic';
 import { getRankInfo } from '../utils/rankingSystem';
+import { setPageTitle, resetPageTitle, showMatchFoundNotification } from '../utils/pageTitle';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { ArrowLeft, Users, Clock, Loader2, Star } from 'lucide-react';
@@ -38,6 +39,9 @@ export function QueueScreen() {
     let queueInterval: NodeJS.Timeout;
     
     if (isQueuing) {
+      // Set page title when starting queue
+      setPageTitle('Searching For Match... - Ranked Clicker');
+      
       queueInterval = setInterval(() => {
         setQueueTime(prev => prev + 1);
         
@@ -46,10 +50,17 @@ export function QueueScreen() {
         
         if (shouldFindMatch) {
           // Match found!
-          setGameMode(selectedPlaylist!);
-          setCurrentScreen('game');
+          showMatchFoundNotification();
+          
+          setTimeout(() => {
+            setGameMode(selectedPlaylist!);
+            setCurrentScreen('game');
+          }, 2000); // Small delay to show the match found state
         }
       }, 1000);
+    } else {
+      // Reset page title when not queuing
+      resetPageTitle();
     }
 
     return () => {
@@ -67,6 +78,7 @@ export function QueueScreen() {
     setIsQueuing(false);
     setQueueTime(0);
     setSelectedPlaylist(null);
+    resetPageTitle();
   };
 
   const formatTime = (seconds: number) => {

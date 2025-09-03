@@ -46,16 +46,16 @@ const ADDITIONAL_NAMES = [
 const ALL_LEADERBOARD_NAMES = [...PRO_NAMES, ...ADDITIONAL_NAMES];
 
 // Generate MMR based on position (higher positions have higher MMR)
-// Range: 2550 (minimum) to 3100 (maximum)
+// Range: 2800 (minimum) to 3500 (maximum)
 const generateMMRForPosition = (position: number, playlist: '1v1' | '2v2' | '3v3'): number => {
   // Top MMR for #1 player varies by playlist
   const topMMR = {
-    '1v1': 3000, // 1v1 slightly lower top end
-    '2v2': 3100, // Most competitive playlist gets highest MMR
-    '3v3': 3050  // Balanced
+    '1v1': 3400, // 1v1 slightly lower top end
+    '2v2': 3500, // Most competitive playlist gets highest MMR
+    '3v3': 3450  // Balanced
   }[playlist];
   
-  const minMMR = 2550; // Minimum Grand Champion MMR
+  const minMMR = 2800; // Minimum Grand Champion MMR
   
   // Linear distribution from top to bottom (position 1-25)
   const mmrRange = topMMR - minMMR;
@@ -169,8 +169,8 @@ export const useLeaderboard = create<LeaderboardStore>()(
         (['1v1', '2v2', '3v3'] as const).forEach(playlist => {
           const playerMMR = playerData.mmr[playlist];
           
-          // Only show player if they have Grand Champion MMR (2550+)
-          if (playerMMR < 2550) return;
+          // Only show player if they have Grand Champion MMR (2800+)
+          if (playerMMR < 2800) return;
           
           const playerEntry: LeaderboardPlayer = {
             id: 'player',

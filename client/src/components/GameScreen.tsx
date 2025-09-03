@@ -4,6 +4,8 @@ import { usePlayerData } from '../stores/usePlayerData';
 import { useTournament } from '../stores/useTournament';
 import { generateAIOpponents, simulateAIClicks } from '../utils/aiOpponents';
 import { calculateMMRChange } from '../utils/rankingSystem';
+import { getTitleStyle, formatTitleStyle } from '../utils/titleUtils';
+import { setPageTitle, resetPageTitle } from '../utils/pageTitle';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
@@ -41,6 +43,21 @@ export function GameScreen() {
     // Random game time between 30-50 seconds for realistic AI game completion
     return 30 + Math.floor(Math.random() * 21);
   });
+
+  // Set page title when game starts
+  useEffect(() => {
+    if (gameState.phase === 'playing') {
+      setPageTitle('In Game - Ranked Clicker');
+    } else if (gameState.phase === 'finished') {
+      setPageTitle('Game Complete - Ranked Clicker');
+    }
+    
+    return () => {
+      if (gameState.phase === 'finished') {
+        resetPageTitle();
+      }
+    };
+  }, [gameState.phase]);
 
   // Initialize opponents and game only once when component mounts
   useEffect(() => {
@@ -490,7 +507,10 @@ export function GameScreen() {
                       {player.hasForfeited && ' [FORFEITED]'}
                     </span>
                     {player.title && (
-                      <span className="text-xs text-gray-400">
+                      <span 
+                        className="text-xs font-medium"
+                        style={formatTitleStyle(getTitleStyle(player.title))}
+                      >
                         {player.title}
                       </span>
                     )}
@@ -519,7 +539,10 @@ export function GameScreen() {
                       {opponent.hasForfeited && ' [FORFEITED]'}
                     </span>
                     {opponent.title && (
-                      <span className="text-xs text-gray-400">
+                      <span 
+                        className="text-xs font-medium"
+                        style={formatTitleStyle(getTitleStyle(opponent.title))}
+                      >
                         {opponent.title}
                       </span>
                     )}
