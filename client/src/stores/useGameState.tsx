@@ -20,6 +20,7 @@ interface GameState {
     isAI: boolean;
     isTeammate: boolean;
     title?: string;
+    mmr?: number;
   }>;
   tournamentContext: TournamentContext;
   
@@ -27,7 +28,7 @@ interface GameState {
   setQueueMode: (mode: 'casual' | 'ranked' | 'tournament') => void;
   setGameMode: (mode: '1v1' | '2v2' | '3v3') => void;
   setShowStatsModal: (show: boolean) => void;
-  setOpponents: (opponents: Array<{ name: string; score: number; isAI: boolean; isTeammate: boolean; title?: string }>) => void;
+  setOpponents: (opponents: Array<{ name: string; score: number; isAI: boolean; isTeammate: boolean; title?: string; mmr?: number }>) => void;
   setTournamentContext: (context: TournamentContext) => void;
   startTournamentMatch: (matchId: string, bestOf: number, opponents: Array<{ name: string; mmr: number; isTeammate: boolean }>) => void;
 }
@@ -74,7 +75,8 @@ export const useGameState = create<GameState>((set, get) => ({
       score: 0,
       isAI: true,
       isTeammate: o.isTeammate,
-      title: 'Tournament Opponent'
+      title: 'Tournament Opponent',
+      mmr: o.mmr
     }));
     
     

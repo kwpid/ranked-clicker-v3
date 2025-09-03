@@ -379,20 +379,29 @@ export function GameScreen() {
       isAI: false,
       isTeammate: true,
       hasForfeited: false,
-      title: playerTitle
+      title: playerTitle,
+      mmr: playerData.mmr[gameMode!]
     },
     ...gameState.opponents.filter(o => o.isTeammate).map(opponent => ({
-      ...opponent,
+      name: opponent.name,
+      score: opponent.score,
+      isAI: opponent.isAI,
+      isTeammate: opponent.isTeammate,
       isPlayer: false,
       hasForfeited: opponent.hasForfeited || false,
-      title: undefined
+      title: (opponent as any).title || undefined,
+      mmr: (opponent as any).mmr || undefined
     }))
   ];
   const opponentTeam = gameState.opponents.filter(o => !o.isTeammate).map(opponent => ({
-    ...opponent,
+    name: opponent.name,
+    score: opponent.score,
+    isAI: opponent.isAI,
+    isTeammate: opponent.isTeammate,
     isPlayer: false,
     hasForfeited: opponent.hasForfeited || false,
-    title: undefined
+    title: opponent.title,
+    mmr: opponent.mmr
   }));
 
   return (
@@ -502,7 +511,7 @@ export function GameScreen() {
                 }`}>
                   <div className="flex flex-col">
                     <span className={player.isPlayer ? 'font-bold text-blue-400' : 'text-white'}>
-                      {player.name}
+                      {player.mmr && `[${player.mmr}] `}{player.name}
                       {player.isPlayer && ' (You)'}
                       {player.hasForfeited && ' [FORFEITED]'}
                     </span>
@@ -535,7 +544,7 @@ export function GameScreen() {
                 }`}>
                   <div className="flex flex-col">
                     <span className="text-white">
-                      {opponent.name}
+                      {opponent.mmr && `[${opponent.mmr}] `}{opponent.name}
                       {opponent.hasForfeited && ' [FORFEITED]'}
                     </span>
                     {opponent.title && (

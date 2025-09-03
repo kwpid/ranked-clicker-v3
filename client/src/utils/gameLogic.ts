@@ -21,7 +21,7 @@ export function estimateQueueTime(playlist: '1v1' | '2v2' | '3v3', mmr: number):
   const isPeakHours = hour >= 18 && hour <= 23;
   
   // Base queue time factors
-  let baseTime = 15; // 15 seconds base (reduced from 30)
+  let baseTime = 8; // 8 seconds base (reduced from 15)
   
   // Playlist popularity (1v1 most popular, 3v3 least)
   const playlistMultiplier = {
@@ -34,25 +34,25 @@ export function estimateQueueTime(playlist: '1v1' | '2v2' | '3v3', mmr: number):
   let mmrMultiplier = 1.0;
   if (mmr < 400) {
     // Bronze - very fast queues
-    mmrMultiplier = 0.4;
+    mmrMultiplier = 0.3;
   } else if (mmr < 700) {
     // Silver - fast queues
-    mmrMultiplier = 0.6;
+    mmrMultiplier = 0.4;
   } else if (mmr < 1000) {
     // Gold - normal queues
-    mmrMultiplier = 1.0;
+    mmrMultiplier = 0.7;
   } else if (mmr < 1300) {
     // Platinum - slightly longer queues
-    mmrMultiplier = 1.4;
+    mmrMultiplier = 1.0;
   } else if (mmr < 1600) {
     // Diamond - longer queues
-    mmrMultiplier = 2.0;
+    mmrMultiplier = 1.4;
   } else if (mmr < 1900) {
     // Champion - much longer queues
-    mmrMultiplier = 2.8;
+    mmrMultiplier = 1.8;
   } else {
     // Grand Champion - very long queues
-    mmrMultiplier = 4.0;
+    mmrMultiplier = 2.5;
   }
   
   // Peak hours reduce queue time

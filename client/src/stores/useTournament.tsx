@@ -390,7 +390,8 @@ export const useTournament = create<TournamentState>()(
       awardTournamentTitle: (tournamentType: TournamentType, playerRank: string) => {
         const state = get();
         const season = state.currentSeason;
-        const baseRank = playerRank.split(' ')[0]; // Get "Silver", "Gold", etc.
+        // Handle Grand Champion specially since it's two words
+        const baseRank = playerRank.startsWith('Grand Champion') ? 'Grand Champion' : playerRank.split(' ')[0]; // Get "Silver", "Gold", etc.
         
         // Count current season wins for this tournament type (not per rank)
         const seasonKey = `s${season}-${tournamentType}`;

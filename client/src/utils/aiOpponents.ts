@@ -10,6 +10,7 @@ export interface AIOpponent {
   isAI: boolean;
   isTeammate: boolean;
   title?: string;
+  mmr?: number;
 }
 
 export function generateAIOpponents(gameMode: '1v1' | '2v2' | '3v3', playerMMR: number): AIOpponent[] {
@@ -28,6 +29,7 @@ export function generateAIOpponents(gameMode: '1v1' | '2v2' | '3v3', playerMMR: 
       isAI: true,
       isTeammate: true,
       title: getRandomAITitle(teammateMMR),
+      mmr: teammateMMR,
     });
   }
   
@@ -40,6 +42,7 @@ export function generateAIOpponents(gameMode: '1v1' | '2v2' | '3v3', playerMMR: 
       isAI: true,
       isTeammate: false,
       title: getRandomAITitle(enemyMMR),
+      mmr: enemyMMR,
     });
   }
   
