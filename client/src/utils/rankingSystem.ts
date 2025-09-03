@@ -90,32 +90,20 @@ export function calculateMMRChange(
 ): number {
   const averageOpponentMMR = opponentMMRs.reduce((sum, mmr) => sum + mmr, 0) / opponentMMRs.length;
   
-  // ELO-style calculation
+  // Simple fixed MMR change system - no K-factors for fairness
   const mmrDifference = averageOpponentMMR - currentMMR;
   
-  // Calculate expected score (probability of winning)
-  const expectedScore = 1 / (1 + Math.pow(10, mmrDifference / 400));
+  // Base MMR change for all players
+  let baseChange = isWin ? 15 : -15;
   
-  // Actual score (1 for win, 0 for loss)
-  const actualScore = isWin ? 1 : 0;
+  // Adjust slightly based on opponent strength difference
+  const difficultyAdjustment = Math.floor(mmrDifference / 100); // ±1 MMR per 100 MMR difference
   
-  // K-factor determines maximum MMR change (between 10-30)
-  let kFactor = 30;
+  // Apply adjustment
+  baseChange += difficultyAdjustment;
   
-  // Reduce K-factor for higher MMR players (more stable at high ranks)
-  if (currentMMR > 1900) {
-    kFactor = 15; // Grand Champion
-  } else if (currentMMR > 1600) {
-    kFactor = 20; // Champion
-  } else if (currentMMR > 1000) {
-    kFactor = 25; // Diamond/Platinum
-  }
-  
-  // Calculate MMR change
-  const mmrChange = Math.round(kFactor * (actualScore - expectedScore));
-  
-  // Ensure minimum and maximum bounds (10-30)
-  const clampedChange = Math.max(-30, Math.min(30, mmrChange));
+  // Ensure reasonable bounds (10-20 MMR change)
+  const clampedChange = Math.max(-20, Math.min(20, baseChange));
   
   // Ensure minimum change of 10 for any game
   if (isWin && clampedChange < 10) {

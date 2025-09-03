@@ -71,7 +71,7 @@ export function GameScreen() {
       // Only generate AI opponents for non-tournament games
       console.log('🤖 Generating regular AI opponents');
       const currentMMR = playerData.mmr[gameMode];
-      const opponents = generateAIOpponents(gameMode, currentMMR);
+      const opponents = generateAIOpponents(gameMode, currentMMR, playerData.currentSeason);
       setGameState(prev => ({ ...prev, opponents }));
     } else if (queueMode === 'tournament' && globalOpponents.length > 0) {
       // Use tournament opponents from global state

@@ -77,7 +77,7 @@ const generateStats = (mmr: number, position: number) => {
 };
 
 // Generate title based on MMR
-const generateTitleForMMR = (mmr: number): string | undefined => {
+const generateTitleForMMR = (mmr: number, currentSeason: number = 1): string | undefined => {
   const rankInfo = getRankInfo(mmr);
   const baseRank = rankInfo.name.split(' ')[0];
   
@@ -85,9 +85,9 @@ const generateTitleForMMR = (mmr: number): string | undefined => {
   if (mmr >= 1700) return 'Grandmaster';
   if (baseRank === 'Grand Champion') return 'Grand Champion';
   
-  // Some players might have season titles
-  if (Math.random() < 0.3) {
-    const season = Math.floor(Math.random() * 5) + 1;
+  // Some players might have season titles (only from current or past seasons)
+  if (Math.random() < 0.3 && currentSeason >= 1) {
+    const season = Math.floor(Math.random() * currentSeason) + 1; // 1 to currentSeason
     return `S${season} ${baseRank}`;
   }
   
@@ -119,7 +119,7 @@ const generateLeaderboardForPlaylist = (playlist: '1v1' | '2v2' | '3v3'): Leader
     
     const mmr = generateMMRForPosition(i, playlist);
     const stats = generateStats(mmr, i);
-    const title = generateTitleForMMR(mmr);
+    const title = generateTitleForMMR(mmr, 1); // Pass current season (default to 1)
     
     players.push({
       id: `ai_${playlist}_${i}`,

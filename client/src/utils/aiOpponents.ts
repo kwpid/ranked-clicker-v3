@@ -13,7 +13,7 @@ export interface AIOpponent {
   mmr?: number;
 }
 
-export function generateAIOpponents(gameMode: '1v1' | '2v2' | '3v3', playerMMR: number): AIOpponent[] {
+export function generateAIOpponents(gameMode: '1v1' | '2v2' | '3v3', playerMMR: number, currentSeason: number = 1): AIOpponent[] {
   const opponents: AIOpponent[] = [];
   
   // Determine team sizes
@@ -28,7 +28,7 @@ export function generateAIOpponents(gameMode: '1v1' | '2v2' | '3v3', playerMMR: 
       score: 0,
       isAI: true,
       isTeammate: true,
-      title: getRandomAITitle(teammateMMR),
+      title: getRandomAITitle(teammateMMR, currentSeason),
       mmr: teammateMMR,
     });
   }
@@ -41,7 +41,7 @@ export function generateAIOpponents(gameMode: '1v1' | '2v2' | '3v3', playerMMR: 
       score: 0,
       isAI: true,
       isTeammate: false,
-      title: getRandomAITitle(enemyMMR),
+      title: getRandomAITitle(enemyMMR, currentSeason),
       mmr: enemyMMR,
     });
   }
@@ -61,9 +61,8 @@ function getRandomAIName(existingOpponents: AIOpponent[]): string {
   return availableNames[Math.floor(Math.random() * availableNames.length)];
 }
 
-function getRandomAITitle(aiMMR: number): string {
-  // Get current season dynamically (could be passed in from game state)
-  const currentSeason = Math.floor(Math.random() * 3) + 1; // Seasons 1-3 for variety
+function getRandomAITitle(aiMMR: number, currentSeason: number = 1): string {
+  // Use passed current season parameter
   
   // Get AI's rank based on MMR
   const getRankFromMMR = (mmr: number): string => {
@@ -175,47 +174,39 @@ function generateOpponentMMR(playerMMR: number, isTeammate: boolean): number {
 }
 
 export function simulateAIClicks(aiMMR: number, playerCPS: number): number {
-  // AI clicking rate based on player's CPS and their rank relative to player
-  
-  // Calculate rank-based multiplier
-  let skillMultiplier = 1.0;
+  // AI clicking rate based on fixed ranges per rank with some variation
+  let baseCPS = 0;
   
   if (aiMMR < 400) {
-    // Bronze level - clicks 60-85% of player's rate
-    skillMultiplier = 0.6 + Math.random() * 0.25;
+    // Bronze level - 3-5 CPS
+    baseCPS = 3 + Math.random() * 2;
   } else if (aiMMR < 700) {
-    // Silver level - clicks 70-90% of player's rate
-    skillMultiplier = 0.7 + Math.random() * 0.2;
+    // Silver level - 4-6 CPS
+    baseCPS = 4 + Math.random() * 2;
   } else if (aiMMR < 1000) {
-    // Gold level - clicks 75-95% of player's rate
-    skillMultiplier = 0.75 + Math.random() * 0.2;
+    // Gold level - 5-7 CPS
+    baseCPS = 5 + Math.random() * 2;
   } else if (aiMMR < 1300) {
-    // Platinum level - clicks 80-100% of player's rate
-    skillMultiplier = 0.8 + Math.random() * 0.2;
+    // Platinum level - 6-8 CPS
+    baseCPS = 6 + Math.random() * 2;
   } else if (aiMMR < 1600) {
-    // Diamond level - clicks 85-105% of player's rate
-    skillMultiplier = 0.85 + Math.random() * 0.2;
+    // Diamond level - 7-9 CPS
+    baseCPS = 7 + Math.random() * 2;
   } else if (aiMMR < 1900) {
-    // Champion level - clicks 90-110% of player's rate
-    skillMultiplier = 0.9 + Math.random() * 0.2;
+    // Champion level - 8-10 CPS
+    baseCPS = 8 + Math.random() * 2;
   } else {
-    // Grand Champion - clicks 95-115% of player's rate, sometimes much higher bursts
-    const hasBurst = Math.random() < 0.15; // 15% chance of burst clicking
-    skillMultiplier = hasBurst ? 1.2 + Math.random() * 0.3 : 0.95 + Math.random() * 0.2;
+    // Grand Champion - 9-12 CPS (switch between max and min as requested)
+    baseCPS = Math.random() < 0.5 ? 9 : 12; // 50/50 chance between min and max
+    baseCPS += (Math.random() - 0.5) * 0.5; // Small variation around the chosen value
   }
   
-  // Calculate target CPS based on player's performance
-  let targetCPS = playerCPS * skillMultiplier;
-  
-  // Add some natural variation
-  targetCPS *= (0.9 + Math.random() * 0.2);
-  
-  // Ensure minimum reasonable CPS
-  targetCPS = Math.max(1, targetCPS);
+  // Add slight natural variation
+  baseCPS *= (0.95 + Math.random() * 0.1);
   
   // Convert CPS to clicks per 100ms interval
-  const clicksPerInterval = (targetCPS / 10);
+  const clicksPerInterval = (baseCPS / 10);
   
   // Return integer clicks with slight randomness
-  return Math.floor(clicksPerInterval + (Math.random() > 0.6 ? 1 : 0));
+  return Math.floor(clicksPerInterval + (Math.random() > 0.7 ? 1 : 0));
 }
