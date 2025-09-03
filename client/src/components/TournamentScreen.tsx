@@ -13,20 +13,25 @@ export function TournamentScreen() {
   const { playerData } = usePlayerData();
   const { 
     nextTournamentTime, 
+    nextSynergyCupTime,
     joinTournamentQueue, 
     startTournamentForTesting, 
     calculateNextTournamentTime,
+    calculateNextSynergyCupTime,
     isQueued,
     queuedTournamentType,
     tournamentTitles,
     seasonTournamentWins,
-    currentSeason
+    currentSeason,
+    isEligibleForSynergyCup
   } = useTournament();
 
   const [timeUntilNext, setTimeUntilNext] = useState('');
+  const [timeUntilSynergyCup, setTimeUntilSynergyCup] = useState('');
 
   useEffect(() => {
     calculateNextTournamentTime();
+    calculateNextSynergyCupTime();
   }, []);
 
   useEffect(() => {
@@ -56,6 +61,36 @@ export function TournamentScreen() {
     return () => clearInterval(interval);
   }, [nextTournamentTime]);
 
+  useEffect(() => {
+    const updateSynergyCupCountdown = () => {
+      if (!nextSynergyCupTime) return;
+      
+      const now = Date.now();
+      const timeLeft = nextSynergyCupTime - now;
+
+      if (timeLeft <= 0) {
+        setTimeUntilSynergyCup('Starting soon!');
+        return;
+      }
+
+      const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+      
+      if (days > 0) {
+        setTimeUntilSynergyCup(`${days}d ${hours}h ${minutes}m`);
+      } else if (hours > 0) {
+        setTimeUntilSynergyCup(`${hours}h ${minutes}m`);
+      } else {
+        setTimeUntilSynergyCup(`${minutes}m`);
+      }
+    };
+
+    updateSynergyCupCountdown();
+    const interval = setInterval(updateSynergyCupCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [nextSynergyCupTime]);
+
   const handleJoinQueue = (type: TournamentType) => {
     joinTournamentQueue(type);
   };
@@ -71,6 +106,8 @@ export function TournamentScreen() {
     description: string;
     icon: React.ReactNode;
     playerCount: string;
+    special?: boolean;
+    eligibilityRequired?: boolean;
   }> = [
     {
       type: '1v1',
@@ -92,6 +129,15 @@ export function TournamentScreen() {
       description: 'Large team battles and tactics',
       icon: <Crown className="h-8 w-8 text-purple-400" />,
       playerCount: '4 teams (12 players)'
+    },
+    {
+      type: 'synergy-cup',
+      title: '🏆 Synergy Cup',
+      description: 'Elite 2v2 for Grand Champions only',
+      icon: <Trophy className="h-8 w-8 text-yellow-400" />,
+      playerCount: '48 teams (96 players)',
+      special: true,
+      eligibilityRequired: true
     }
   ];
 
@@ -100,9 +146,10 @@ export function TournamentScreen() {
     return seasonTournamentWins[`s${currentSeason}-${type}`] || 0;
   };
 
-  // Get player's current rank
+  // Get player's current rank and eligibility
   const playerRankInfo = getRankInfo(playerData.mmr['1v1']); // Use 1v1 MMR for overall rank
   const playerRank = playerRankInfo.name.includes('Grand Champion') ? 'Grand Champion' : playerRankInfo.name;
+  const isGrandChampion = Math.max(playerData.mmr['1v1'], playerData.mmr['2v2'], playerData.mmr['3v3']) >= 2550;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -123,12 +170,23 @@ export function TournamentScreen() {
           </div>
         </div>
         
-        <div className="text-right">
-          <div className="text-sm text-gray-400">Next Tournament</div>
-          <div className="flex items-center gap-1 text-lg font-bold text-white">
-            <Clock className="h-5 w-5" />
-            {timeUntilNext}
+        <div className="text-right space-y-2">
+          <div>
+            <div className="text-sm text-gray-400">Next Tournament</div>
+            <div className="flex items-center gap-1 text-lg font-bold text-white">
+              <Clock className="h-5 w-5" />
+              {timeUntilNext}
+            </div>
           </div>
+          {isGrandChampion && (
+            <div>
+              <div className="text-sm text-yellow-400">🏆 Synergy Cup</div>
+              <div className="flex items-center gap-1 text-lg font-bold text-yellow-400">
+                <Clock className="h-5 w-5" />
+                {timeUntilSynergyCup}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -160,65 +218,115 @@ export function TournamentScreen() {
       </Card>
 
       {/* Tournament Modes */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {tournamentModes.map((mode) => (
-          <Card 
-            key={mode.type} 
-            className={`bg-gray-800 border-gray-700 transition-all duration-200 hover:border-gray-600 ${
-              isQueued && queuedTournamentType === mode.type ? 'ring-2 ring-yellow-500 border-yellow-500' : ''
-            }`}
-          >
-            <CardHeader className="text-center">
-              <div className="mx-auto mb-2">
-                {mode.icon}
-              </div>
-              <CardTitle className="text-white">{mode.title}</CardTitle>
-              <p className="text-sm text-gray-400">{mode.description}</p>
-              <Badge variant="outline" className="mx-auto">
-                {mode.playerCount}
-              </Badge>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Season Stats */}
-              <div className="bg-gray-900/50 p-3 rounded">
-                <div className="text-center">
-                  <div className="text-lg font-bold text-white">
-                    {getCurrentSeasonWins(mode.type)}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {tournamentModes.map((mode) => {
+          // Handle eligibility for special tournaments
+          if (mode.eligibilityRequired && !isGrandChampion && mode.type === 'synergy-cup') {
+            return (
+              <Card 
+                key={mode.type} 
+                className="bg-gray-800 border-gray-700 opacity-50"
+              >
+                <CardHeader className="text-center">
+                  <div className="mx-auto mb-2">
+                    {mode.icon}
                   </div>
-                  <div className="text-xs text-gray-400">
-                    Season {currentSeason} Wins
+                  <CardTitle className="text-white">{mode.title}</CardTitle>
+                  <p className="text-sm text-gray-400">{mode.description}</p>
+                  <Badge variant="outline" className="mx-auto">
+                    {mode.playerCount}
+                  </Badge>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-red-900/20 p-3 rounded border border-red-500/30">
+                    <div className="text-center text-red-400 text-sm">
+                      <div className="font-bold">Locked</div>
+                      <div>Requires Grand Champion rank</div>
+                    </div>
                   </div>
-                  {getCurrentSeasonWins(mode.type) >= 3 && (
-                    <Badge 
-                      variant="outline" 
-                      className={`mt-1 ${
-                        playerRank === 'Grand Champion' 
-                          ? 'border-yellow-400 text-yellow-400' 
-                          : 'border-green-400 text-green-400'
-                      }`}
-                    >
-                      {playerRank === 'Grand Champion' ? 'Golden' : 'Green'} Titles
-                    </Badge>
-                  )}
-                </div>
-              </div>
+                </CardContent>
+              </Card>
+            );
+          }
 
-              {/* Action Buttons */}
-              <div className="space-y-2">
-                <Button
-                  onClick={() => handleJoinQueue(mode.type)}
-                  disabled={isQueued}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+          return (
+            <Card 
+              key={mode.type} 
+              className={`transition-all duration-200 ${
+                mode.special 
+                  ? 'bg-gradient-to-br from-yellow-900/20 to-orange-900/20 border-yellow-500/50 hover:border-yellow-400' 
+                  : 'bg-gray-800 border-gray-700 hover:border-gray-600'
+              } ${isQueued && queuedTournamentType === mode.type ? 'ring-2 ring-yellow-500 border-yellow-500' : ''}`}
+            >
+              <CardHeader className="text-center">
+                <div className="mx-auto mb-2">
+                  {mode.icon}
+                </div>
+                <CardTitle className={mode.special ? "text-yellow-400" : "text-white"}>
+                  {mode.title}
+                </CardTitle>
+                <p className="text-sm text-gray-400">{mode.description}</p>
+                <Badge 
+                  variant="outline" 
+                  className={`mx-auto ${mode.special ? 'border-yellow-400 text-yellow-400' : ''}`}
                 >
-                  {isQueued && queuedTournamentType === mode.type 
-                    ? 'In Queue' 
-                    : 'Join Queue'
-                  }
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                  {mode.playerCount}
+                </Badge>
+                {mode.special && (
+                  <Badge 
+                    variant="outline" 
+                    className="mx-auto mt-1 border-yellow-400 text-yellow-400"
+                  >
+                    Double Elimination
+                  </Badge>
+                )}
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Season Stats */}
+                <div className="bg-gray-900/50 p-3 rounded">
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-white">
+                      {getCurrentSeasonWins(mode.type)}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      Season {currentSeason} Wins
+                    </div>
+                    {getCurrentSeasonWins(mode.type) >= 3 && (
+                      <Badge 
+                        variant="outline" 
+                        className={`mt-1 ${
+                          playerRank === 'Grand Champion' 
+                            ? 'border-yellow-400 text-yellow-400' 
+                            : 'border-green-400 text-green-400'
+                        }`}
+                      >
+                        {playerRank === 'Grand Champion' ? 'Golden' : 'Green'} Titles
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="space-y-2">
+                  <Button
+                    onClick={() => handleJoinQueue(mode.type)}
+                    disabled={isQueued}
+                    className={`w-full text-white ${
+                      mode.special 
+                        ? 'bg-yellow-600 hover:bg-yellow-700' 
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
+                  >
+                    {isQueued && queuedTournamentType === mode.type 
+                      ? 'In Queue' 
+                      : 'Join Queue'
+                    }
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Recent Tournament Titles */}

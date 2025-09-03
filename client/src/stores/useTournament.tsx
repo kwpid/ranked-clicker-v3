@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type TournamentType = '1v1' | '2v2' | '3v3';
+export type TournamentType = '1v1' | '2v2' | '3v3' | 'synergy-cup';
 export type TournamentPhase = 'waiting' | 'queued' | 'in-progress' | 'finished';
 export type BracketRound = 'round1' | 'round2' | 'round3' | 'semifinal' | 'final';
 
@@ -41,6 +41,9 @@ export interface TournamentTitle {
 interface TournamentState {
   // Tournament scheduling
   nextTournamentTime: number;
+  nextSynergyCupTime: number;
+  synergyCupNotificationShown: boolean;
+  synergyCupPlacements: Array<{ season: number; placement: number; date: string }>;
   currentTournament: {
     id: string;
     type: TournamentType;
@@ -49,6 +52,7 @@ interface TournamentState {
     matches: TournamentMatch[];
     currentRound: BracketRound;
     startTime: number;
+    isDoubleElimination?: boolean;
   } | null;
   
   // Queue state
@@ -63,25 +67,34 @@ interface TournamentState {
   
   // Actions
   calculateNextTournamentTime: () => void;
+  calculateNextSynergyCupTime: () => void;
   checkAndStartTournament: () => void;
+  checkAndStartSynergyCup: () => void;
   joinTournamentQueue: (type: TournamentType) => void;
   leaveTournamentQueue: () => void;
   startTournamentForTesting: (type: TournamentType) => void;
+  forceSynergyCup: () => void;
   generateTournamentBracket: (players: TournamentPlayer[], type: TournamentType) => void;
   simulateAIMatches: () => void;
   checkRoundCompletion: () => void;
   completeMatch: (matchId: string, winner: string, gameResults: any[]) => void;
   awardTournamentTitle: (tournamentType: TournamentType, playerRank: string) => void;
+  awardSynergyCupTitle: (placement: number) => void;
   updateTournamentPhase: (phase: TournamentPhase) => void;
   isGameModeBlocked: () => boolean;
   playTournamentMatch: (matchId: string) => void;
   completeTournamentGame: (matchId: string, playerWon: boolean, playerScore: number, opponentScores: { [id: string]: number }) => void;
+  isEligibleForSynergyCup: () => boolean;
+  showSynergyCupNotification: () => void;
 }
 
 export const useTournament = create<TournamentState>()(
   persist(
     (set, get) => ({
       nextTournamentTime: 0,
+      nextSynergyCupTime: 0,
+      synergyCupNotificationShown: false,
+      synergyCupPlacements: [],
       currentTournament: null,
       isQueued: false,
       queuedTournamentType: null,
@@ -114,6 +127,28 @@ export const useTournament = create<TournamentState>()(
         get().checkAndStartTournament();
       },
 
+      calculateNextSynergyCupTime: () => {
+        const now = new Date();
+        const nextSaturday = new Date(now);
+        
+        // Find next Saturday
+        const daysUntilSaturday = (6 - now.getDay()) % 7;
+        if (daysUntilSaturday === 0 && (now.getHours() > 19 || (now.getHours() === 19 && now.getMinutes() > 0))) {
+          // If it's Saturday after 7pm, go to next Saturday
+          nextSaturday.setDate(now.getDate() + 7);
+        } else {
+          nextSaturday.setDate(now.getDate() + daysUntilSaturday);
+        }
+        
+        // Set to 7pm (19:00)
+        nextSaturday.setHours(19, 0, 0, 0);
+        
+        set({ nextSynergyCupTime: nextSaturday.getTime() });
+        
+        // Check if synergy cup should start
+        get().checkAndStartSynergyCup();
+      },
+
       checkAndStartTournament: () => {
         const state = get();
         if (!state.isQueued || !state.nextTournamentTime) return;
@@ -123,6 +158,25 @@ export const useTournament = create<TournamentState>()(
           // Start the tournament
           state.startTournamentForTesting(state.queuedTournamentType);
           // Navigate to bracket screen for regular tournaments too
+          import('../stores/useGameState').then(({ useGameState }) => {
+            useGameState.getState().setCurrentScreen('tournament-bracket');
+          });
+        }
+      },
+
+      checkAndStartSynergyCup: () => {
+        const state = get();
+        const now = Date.now();
+        
+        // Check if it's Saturday 7pm and player is eligible
+        if (now >= state.nextSynergyCupTime && state.isEligibleForSynergyCup() && state.queuedTournamentType === 'synergy-cup') {
+          // Show notification if not shown yet
+          if (!state.synergyCupNotificationShown) {
+            state.showSynergyCupNotification();
+          }
+          
+          // Start Synergy Cup
+          state.startTournamentForTesting('synergy-cup');
           import('../stores/useGameState').then(({ useGameState }) => {
             useGameState.getState().setCurrentScreen('tournament-bracket');
           });
@@ -147,11 +201,132 @@ export const useTournament = create<TournamentState>()(
         });
       },
 
+      forceSynergyCup: () => {
+        // Console command to force start Synergy Cup for testing
+        get().startTournamentForTesting('synergy-cup');
+        import('../stores/useGameState').then(({ useGameState }) => {
+          useGameState.getState().setCurrentScreen('tournament-bracket');
+        });
+      },
+
+      isEligibleForSynergyCup: () => {
+        // Check if player is Grand Champion or higher in any mode (synchronous)
+        try {
+          const playerData = (globalThis as any).__playerData__;
+          if (!playerData) return false;
+          const highestMMR = Math.max(playerData.mmr['1v1'], playerData.mmr['2v2'], playerData.mmr['3v3']);
+          return highestMMR >= 2550; // Grand Champion threshold
+        } catch {
+          return false;
+        }
+      },
+
+      showSynergyCupNotification: () => {
+        // Show notification that Synergy Cup is starting
+        set({ synergyCupNotificationShown: true });
+        
+        // Could integrate with a toast notification system here
+        console.log('🏆 SYNERGY CUP STARTING! 🏆 - The elite 2v2 tournament for Grand Champions begins now!');
+      },
+
+      awardSynergyCupTitle: (placement: number) => {
+        const state = get();
+        const season = state.currentSeason;
+        
+        // Record placement for ELITE title tracking
+        const newPlacement = {
+          season,
+          placement,
+          date: new Date().toISOString()
+        };
+        
+        const updatedPlacements = [...state.synergyCupPlacements, newPlacement];
+        
+        // Determine title based on placement
+        let titleName = '';
+        if (placement === 1) {
+          titleName = `SYNERGY CUP S${season} CHAMPION`;
+        } else if (placement <= 3) {
+          titleName = `SYNERGY CUP S${season} FINALIST`;
+        }
+        
+        // Check for ELITE title eligibility (top 10 in 3+ seasons)
+        const top10Seasons = updatedPlacements.filter(p => p.placement <= 10);
+        const uniqueSeasons = Array.from(new Set(top10Seasons.map(p => p.season)));
+        
+        let eliteTitle: TournamentTitle | null = null;
+        if (uniqueSeasons.length >= 3 && placement <= 10) {
+          eliteTitle = {
+            id: `synergy-cup-elite`,
+            name: 'SYNERGY CUP ELITE',
+            season: 0, // Special season value for persistent titles
+            rank: 'Elite',
+            wins: uniqueSeasons.length,
+            color: 'golden' as const,
+            dateAwarded: new Date().toISOString()
+          };
+        }
+        
+        const newTitles: TournamentTitle[] = [];
+        
+        // Add placement title if applicable
+        if (titleName) {
+          const placementTitle = {
+            id: `synergy-cup-s${season}-p${placement}`,
+            name: titleName,
+            season,
+            rank: 'Synergy Cup',
+            wins: 1,
+            color: 'golden' as const,
+            dateAwarded: new Date().toISOString()
+          };
+          newTitles.push(placementTitle);
+        }
+        
+        // Add elite title if earned
+        if (eliteTitle && !state.tournamentTitles.some(t => t.id === 'synergy-cup-elite')) {
+          newTitles.push(eliteTitle);
+        }
+        
+        // Update state
+        set(state => ({
+          synergyCupPlacements: updatedPlacements,
+          tournamentTitles: [...state.tournamentTitles, ...newTitles]
+        }));
+        
+        // Add titles to player data
+        import('../stores/usePlayerData').then(({ usePlayerData }) => {
+          const playerDataStore = usePlayerData.getState();
+          
+          newTitles.forEach(title => {
+            const existingRewardIndex = playerDataStore.playerData.seasonRewards.findIndex(
+              reward => reward.rank === title.name && reward.season === title.season
+            );
+            
+            if (existingRewardIndex === -1) {
+              const seasonReward = {
+                rank: title.name,
+                season: title.season,
+                unlocked: true
+              };
+              
+              usePlayerData.setState(state => ({
+                playerData: {
+                  ...state.playerData,
+                  seasonRewards: [...state.playerData.seasonRewards, seasonReward],
+                  unlockedTitles: [...state.playerData.unlockedTitles, title.id]
+                }
+              }));
+            }
+          });
+        });
+      },
+
       startTournamentForTesting: async (type: TournamentType) => {
         const tournamentId = `test-${Date.now()}`;
         
         // Generate AI opponents based on tournament type
-        const playerCount = type === '1v1' ? 8 : type === '2v2' ? 8 : 12; // Teams for 2v2/3v3
+        let playerCount = type === '1v1' ? 8 : type === '2v2' ? 8 : type === '3v3' ? 12 : 48; // 48 teams for Synergy Cup
         const players: TournamentPlayer[] = [];
         
         // Add the real player with their actual data
@@ -172,18 +347,21 @@ export const useTournament = create<TournamentState>()(
           eliminated: false
         });
         
-        // Add AI players
-        // Use AI names from the proper file
+        // Extended AI names for Synergy Cup (48 teams)
         const aiNames = [
-          "L", "kupid", "l0st", "jayleng", "weweewew", "RisingPhoinex87", "dr.1", "prot", "hunt", "kif", "?", "rivverott", "1x Dark", "Moxxy!", "ä", "شغثغخ", "dark!", "Vortex", "FlickMaster17", "r", "Skywave!", "R3tr0", "TurboClash893", "Zynk", "Null_Force", "Orbital", "Boosted", "GravyTrain", "NitroNinja", "PixelPlay", "PhantomX", "Fury", "Zero!", "Moonlight", "QuickTap", "v1per", "Slugger", "MetaDrift", "Hydra", "Neo!", "ShadowDart", "SlipStream", "F1ick", "Karma", "Sparkz", "Glitch", "Dash7", "Ignite", "Cyclone", "Nova", "Opt1c", "Viral", "Stormz", "PyroBlast", "Bl1tz", "Echo", "Hover", "PulseRider"
+          "L", "kupid", "l0st", "jayleng", "weweewew", "RisingPhoinex87", "dr.1", "prot", "hunt", "kif", "?", "rivverott", "1x Dark", "Moxxy!", "ä", "شغثغخ", "dark!", "Vortex", "FlickMaster17", "r", "Skywave!", "R3tr0", "TurboClash893", "Zynk", "Null_Force", "Orbital", "Boosted", "GravyTrain", "NitroNinja", "PixelPlay", "PhantomX", "Fury", "Zero!", "Moonlight", "QuickTap", "v1per", "Slugger", "MetaDrift", "Hydra", "Neo!", "ShadowDart", "SlipStream", "F1ick", "Karma", "Sparkz", "Glitch", "Dash7", "Ignite", "Cyclone", "Nova", "Opt1c", "Viral", "Stormz", "PyroBlast", "Bl1tz", "Echo", "Hover", "PulseRider", "Phantom", "Rage", "Storm", "Elite", "Apex", "Titan", "Shadow", "Lightning", "Thunder", "Blaze", "Frost", "Magma", "Void", "Cosmic", "Nebula", "Galaxy", "Solar", "Lunar", "Eclipse", "Aurora", "Comet", "Meteor", "Quasar", "Pulsar", "Supernova", "Starfire", "Nightfall", "Dawn", "Twilight", "Horizon", "Zenith", "Velocity", "Momentum", "Energy", "Force", "Power", "Strength", "Dominance", "Victory", "Triumph", "Glory", "Honor", "Legend", "Myth", "Hero", "Champion", "Master", "Expert"
         ];
+        
+        // Set minimum MMR for tournament participants
+        const minMMR = type === 'synergy-cup' ? 2550 : 1000; // Grand Champion+ for Synergy Cup
+        const maxMMR = type === 'synergy-cup' ? 3500 : 3100;
         
         for (let i = 0; i < playerCount - 1; i++) {
           players.push({
             id: `ai-${i}`,
             name: aiNames[i] || `Player${i + 1}`,
-            rank: 'Grand Champion',
-            mmr: 2550 + Math.floor(Math.random() * 550),
+            rank: type === 'synergy-cup' ? 'Grand Champion' : 'Grand Champion',
+            mmr: minMMR + Math.floor(Math.random() * (maxMMR - minMMR)),
             isPlayer: false,
             eliminated: false
           });
@@ -196,7 +374,8 @@ export const useTournament = create<TournamentState>()(
           players: players.slice(0, playerCount),
           matches: [],
           currentRound: 'round1' as BracketRound,
-          startTime: Date.now()
+          startTime: Date.now(),
+          isDoubleElimination: type === 'synergy-cup'
         };
         
         set({ 
@@ -647,10 +826,31 @@ setInterval(() => {
   useTournament.getState().calculateNextTournamentTime();
 }, 60000);
 
+// Update Synergy Cup timing every hour
+setInterval(() => {
+  useTournament.getState().calculateNextSynergyCupTime();
+}, 60 * 60 * 1000);
+
 // Check for tournament starts every 5 seconds
 setInterval(() => {
   useTournament.getState().checkAndStartTournament();
 }, 5000);
+
+// Check for Synergy Cup starts every 30 seconds
+setInterval(() => {
+  useTournament.getState().checkAndStartSynergyCup();
+}, 30000);
+
+// Initialize Synergy Cup timing
+useTournament.getState().calculateNextSynergyCupTime();
+
+// Add console command for testing Synergy Cup
+if (typeof window !== 'undefined') {
+  (window as any).forceSynergyCup = () => {
+    console.log('🏆 Starting Synergy Cup for testing...');
+    useTournament.getState().forceSynergyCup();
+  };
+}
 
 // Handle page visibility changes and beforeunload to prevent stuck queue states
 document.addEventListener('visibilitychange', () => {

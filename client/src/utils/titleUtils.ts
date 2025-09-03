@@ -39,6 +39,14 @@ export function getTitleStyle(title: string): TitleStyle {
     };
   }
 
+  // Synergy Cup titles (all golden with glow)
+  if (title.includes('SYNERGY CUP')) {
+    return {
+      color: '#FFD700', // Golden
+      glow: true
+    };
+  }
+
   // Default styling
   return {
     color: '#9CA3AF',
