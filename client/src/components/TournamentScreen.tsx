@@ -215,13 +215,6 @@ export function TournamentScreen() {
                     : 'Join Queue'
                   }
                 </Button>
-                <Button
-                  onClick={() => handleTestTournament(mode.type)}
-                  variant="outline"
-                  className="w-full text-gray-300 border-gray-600 hover:bg-gray-700"
-                >
-                  Start Test Tournament
-                </Button>
               </div>
             </CardContent>
           </Card>
