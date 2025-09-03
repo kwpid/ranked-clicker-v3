@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePlayerData } from '../stores/usePlayerData';
 import { useGameState } from '../stores/useGameState';
 import { getRankInfo } from '../utils/rankingSystem';
@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Edit2, Save, X, Crown } from 'lucide-react';
+import { Edit2, Save, X, Crown, Clock } from 'lucide-react';
 
 export function PlayerCard() {
   const { playerData, updateUsername, getAvailableTitles, equipTitle } = usePlayerData();
@@ -27,41 +27,36 @@ export function PlayerCard() {
     setIsEditingUsername(false);
   };
 
-  const renderRankInfo = (playlist: '1v1' | '2v2' | '3v3') => {
-    const mmr = playerData.mmr[playlist];
-    const rankInfo = getRankInfo(mmr);
-    const seasonWins = playerData.seasonWins?.[playlist] || 0;
-    const baseRank = rankInfo.name.split(' ')[0];
-    const rankOrder = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Champion', 'Grand Champion'];
-    const currentRankIndex = rankOrder.indexOf(baseRank);
-    const nextRewardWins = currentRankIndex >= 0 ? (currentRankIndex + 1) * 10 : 10;
+  const [timeToNextSeason, setTimeToNextSeason] = useState('');
+
+  const calculateSeasonTimer = () => {
+    const now = new Date();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const timeDiff = nextMonth.getTime() - now.getTime();
     
-    return (
-      <div className="bg-gray-800 rounded-lg p-3 border border-gray-700">
-        <div className="text-sm text-gray-400 mb-1">{playlist}</div>
-        <div className="font-semibold text-lg" style={{ color: rankInfo.color }}>
-          {rankInfo.name}
-        </div>
-        {rankInfo.division && (
-          <div className="text-sm text-gray-300">Division {rankInfo.division}</div>
-        )}
-        <div className="text-xs text-gray-500 mt-1">{mmr} MMR</div>
-        {/* Season Rewards Progress */}
-        <div className="mt-2 pt-2 border-t border-gray-700">
-          <div className="text-xs text-gray-400 mb-1">
-            Season Wins: {seasonWins}
-          </div>
-          {currentRankIndex >= 0 && (
-            <div className="text-xs text-orange-400">
-              {seasonWins >= nextRewardWins 
-                ? `${baseRank} Reward Unlocked!` 
-                : `${nextRewardWins - seasonWins} wins to ${baseRank} reward`}
-            </div>
-          )}
-        </div>
-      </div>
-    );
+    const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (days > 0) {
+      return `${days}d ${hours}h ${minutes}m`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else {
+      return `${minutes}m`;
+    }
   };
+
+  useEffect(() => {
+    const updateTimer = () => {
+      setTimeToNextSeason(calculateSeasonTimer());
+    };
+    
+    updateTimer();
+    const interval = setInterval(updateTimer, 60000); // Update every minute
+    
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <Card className="bg-gray-800 border-gray-700">
@@ -205,10 +200,20 @@ export function PlayerCard() {
         
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-3 gap-4">
-          {renderRankInfo('1v1')}
-          {renderRankInfo('2v2')}
-          {renderRankInfo('3v3')}
+        {/* Season Timer */}
+        <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Clock className="w-4 h-4 text-blue-400" />
+            <span className="text-sm font-medium text-gray-300">Next Season Starts In</span>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-400">
+              {timeToNextSeason}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Season {playerData.currentSeason + 1} begins on the 1st of next month
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
