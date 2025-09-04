@@ -47,6 +47,14 @@ export function getTitleStyle(title: string): TitleStyle {
     };
   }
 
+  // RCCS titles (all aqua glow with cyan color)
+  if (title.includes('RCCS S')) {
+    return {
+      color: '#00FFFF', // Cyan/aqua
+      glow: true
+    };
+  }
+
   // Default styling
   return {
     color: '#9CA3AF',

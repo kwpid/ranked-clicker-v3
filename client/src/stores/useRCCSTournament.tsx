@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getRankInfo } from '../utils/rankingSystem';
+import { useTournament } from './useTournament';
 
 // RCCS Tournament System - Ranked Clicker Championship Series
 // Format: 3v3 RLCS-style tournament with Qualifiers → Regionals → Majors → Worlds
@@ -83,6 +84,7 @@ interface RCCSTournamentStore {
   simulateMatch: (team1: RCCSTeam, team2: RCCSTeam) => RCCSMatch;
   advanceTournament: () => void;
   calculateRewards: (tournament: RCCSTournament) => void;
+  awardRCCSTitle: (titleName: string, placement: number, stage: string) => void;
   dismissNotification: (notificationId: string) => void;
   
   // Debug/Testing
@@ -506,16 +508,51 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
       calculateRewards: (tournament: RCCSTournament) => {
         // Award titles to players based on their placement
         tournament.teams.forEach(team => {
-          if (team.placement) {
+          if (team.placement && team.id === get().playerTeam?.id) {
+            // This is the player's team, award them the title
             for (const reward of tournament.rewards) {
               if (team.placement >= reward.minPlacement && team.placement <= reward.maxPlacement) {
-                // In a real implementation, this would save to database and add to player titles
-                console.log(`Team ${team.playerName} earned: ${reward.title} (Placement: ${team.placement})`);
+                // Award the RCCS title to the player
+                get().awardRCCSTitle(reward.title, team.placement, tournament.stage);
+                console.log(`🏆 Player earned RCCS title: ${reward.title} (Placement: ${team.placement})`);
                 break;
               }
             }
           }
         });
+      },
+
+      awardRCCSTitle: (titleName: string, placement: number, stage: string) => {
+        // Get the tournament store to award the title
+        const tournamentStore = useTournament.getState();
+        
+        // Create a unique title ID for RCCS titles
+        const titleId = `rccs-s${get().currentSeason}-${stage}-p${placement}`;
+        
+        // Check if title already exists
+        const existingTitle = tournamentStore.tournamentTitles.find(t => t.id === titleId);
+        if (existingTitle) {
+          console.log(`RCCS title already exists: ${titleName}`);
+          return;
+        }
+
+        // Create the RCCS title
+        const rccsTitle = {
+          id: titleId,
+          name: titleName,
+          season: get().currentSeason,
+          rank: 'RCCS',
+          wins: 1,
+          color: 'golden' as const, // All RCCS titles are prestigious (golden)
+          dateAwarded: new Date().toISOString()
+        };
+
+        // Add title to tournament store
+        useTournament.setState(state => ({
+          tournamentTitles: [...state.tournamentTitles, rccsTitle]
+        }));
+
+        console.log(`✅ Successfully awarded RCCS title: ${titleName}`);
       },
 
       dismissNotification: (notificationId: string) => {
