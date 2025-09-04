@@ -652,8 +652,21 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
             let highestTierReward: RCCSTournamentReward | null = null;
             for (const reward of tournament.rewards) {
               if (team.placement >= reward.minPlacement && team.placement <= reward.maxPlacement) {
-                highestTierReward = reward;
-                break;
+                // For major tournaments, prioritize location-specific titles over regular titles
+                if (tournament.stage === 'majors' && tournament.location) {
+                  // Only award location-specific title for major champions
+                  if (reward.title.includes('{location}') && team.placement === 1) {
+                    highestTierReward = reward;
+                    break;
+                  } else if (!reward.title.includes('{location}') && team.placement !== 1) {
+                    // Award regular major titles for non-champions
+                    highestTierReward = reward;
+                    break;
+                  }
+                } else {
+                  highestTierReward = reward;
+                  break;
+                }
               }
             }
             

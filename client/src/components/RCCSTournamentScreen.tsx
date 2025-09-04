@@ -30,6 +30,7 @@ export function RCCSTournamentScreen() {
     currentSeason,
     seasonEndDate,
     tournamentStartDate,
+    seasonMajorLocations,
     checkTournamentEligibility,
     registerPlayerForTournament,
     advanceTournament,
@@ -223,6 +224,37 @@ export function RCCSTournamentScreen() {
                 </div>
                 <div className="text-xs text-gray-400">
                   {info.maxTeams} teams → {info.advanceCount} advance
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Season Major Locations */}
+      <Card className="bg-gradient-to-r from-blue-900/20 to-purple-900/20 border-blue-500/50">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <Crown className="h-6 w-6 text-blue-400" />
+            Season {currentSeason} Major Tournament Locations
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {seasonMajorLocations?.map((location, index) => (
+              <div 
+                key={location} 
+                className="bg-blue-900/20 p-4 rounded-lg border border-blue-500/30"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <Trophy className="h-5 w-5 text-blue-400" />
+                  <div className="font-bold text-blue-400">Major {index + 1}</div>
+                </div>
+                <div className="text-xl font-bold text-white mb-2">
+                  {location}
+                </div>
+                <div className="text-sm text-gray-300">
+                  Champions will earn the prestigious "{location} Major Champion" title
                 </div>
               </div>
             ))}
