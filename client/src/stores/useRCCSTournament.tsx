@@ -524,7 +524,7 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
               maxTeams: 12,
               rewards: RCCS_REWARDS.majors.map(r => ({
                 ...r,
-                title: r.title.replace('{season}', tournament.season.toString()).replace('{location}', majorLocation || 'UNKNOWN')
+                title: r.title.replace('{season}', tournament.season.toString())
               })),
             };
             
@@ -685,8 +685,13 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
               
               // Award all earned titles
               earnedTitles.forEach(titleReward => {
-                get().awardRCCSTitle(titleReward.title, team.placement!, tournament.stage, titleReward.color);
-                console.log(`🏆 Player earned RCCS title: ${titleReward.title} (Placement: ${team.placement})`);
+                // For major tournaments with location-specific titles, replace the location dynamically
+                let finalTitle = titleReward.title;
+                if (tournament.stage === 'majors' && tournament.location && finalTitle.includes('{location}')) {
+                  finalTitle = finalTitle.replace('{location}', tournament.location);
+                }
+                get().awardRCCSTitle(finalTitle, team.placement!, tournament.stage, titleReward.color);
+                console.log(`🏆 Player earned RCCS title: ${finalTitle} (Placement: ${team.placement})`);
               });
             }
             
