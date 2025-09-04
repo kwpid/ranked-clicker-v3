@@ -73,6 +73,7 @@ interface RCCSTournamentStore {
   // Season management
   currentSeason: number;
   seasonEndDate: Date | null;
+  tournamentStartDate: Date | null;
   
   // Actions
   initializeTournamentSystem: () => void;
@@ -143,6 +144,7 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
       notifications: [],
       currentSeason: 1,
       seasonEndDate: null,
+      tournamentStartDate: null,
 
       initializeTournamentSystem: () => {
         const now = new Date();
@@ -152,6 +154,7 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
         
         set({ 
           seasonEndDate: seasonEnd,
+          tournamentStartDate: tournamentStart,
         });
         
         // Check if we should show tournament notification
@@ -654,6 +657,7 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
           playerTeam: null,
           notifications: [],
           seasonEndDate: new Date(Date.now() + 28 * 24 * 60 * 60 * 1000),
+          tournamentStartDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // 3 weeks from now (1 week before season end)
         }));
         
         // Initialize new season's tournament system

@@ -2,12 +2,9 @@
 import { useRCCSTournament } from '../stores/useRCCSTournament';
 import { usePlayerData } from '../stores/usePlayerData';
 
-// Make console commands available globally in development
+// Make console commands available globally (hidden in production)
 export const initializeConsoleCommands = () => {
-  if (process.env.NODE_ENV !== 'development') {
-    console.log('Console commands are only available in development mode');
-    return;
-  }
+  const isDevelopment = process.env.NODE_ENV === 'development';
 
   // Define global console commands
   (window as any).rccs = {
@@ -111,6 +108,9 @@ export const initializeConsoleCommands = () => {
     (window as any).rccs.help();
   };
 
-  console.log('🏆 RCCS Console commands loaded! Type "rccs.help()" for available commands');
-  console.log('💡 Quick start: rccs.boostToChampion() then rccs.startTournament() then rccs.register()');
+  // Only show console logs in development mode
+  if (isDevelopment) {
+    console.log('🏆 RCCS Console commands loaded! Type "rccs.help()" for available commands');
+    console.log('💡 Quick start: rccs.boostToChampion() then rccs.startTournament() then rccs.register()');
+  }
 };

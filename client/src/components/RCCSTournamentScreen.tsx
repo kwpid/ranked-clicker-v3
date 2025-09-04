@@ -29,6 +29,7 @@ export function RCCSTournamentScreen() {
     playerTeam,
     currentSeason,
     seasonEndDate,
+    tournamentStartDate,
     checkTournamentEligibility,
     registerPlayerForTournament,
     advanceTournament,
@@ -36,6 +37,7 @@ export function RCCSTournamentScreen() {
   } = useRCCSTournament();
 
   const [timeUntilSeasonEnd, setTimeUntilSeasonEnd] = useState('');
+  const [timeUntilTournamentStart, setTimeUntilTournamentStart] = useState('');
   
   useEffect(() => {
     const updateCountdown = () => {
@@ -66,6 +68,40 @@ export function RCCSTournamentScreen() {
     const interval = setInterval(updateCountdown, 1000);
     return () => clearInterval(interval);
   }, [seasonEndDate]);
+
+  // Tournament start countdown
+  useEffect(() => {
+    const updateTournamentCountdown = () => {
+      if (!tournamentStartDate) return;
+      
+      const now = Date.now();
+      const timeLeft = tournamentStartDate.getTime() - now;
+
+      if (timeLeft <= 0) {
+        setTimeUntilTournamentStart('Tournament Live!');
+        return;
+      }
+
+      const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+      
+      if (days > 0) {
+        setTimeUntilTournamentStart(`${days}d ${hours}h ${minutes}m`);
+      } else if (hours > 0) {
+        setTimeUntilTournamentStart(`${hours}h ${minutes}m ${seconds}s`);
+      } else if (minutes > 0) {
+        setTimeUntilTournamentStart(`${minutes}m ${seconds}s`);
+      } else {
+        setTimeUntilTournamentStart(`${seconds}s`);
+      }
+    };
+
+    updateTournamentCountdown();
+    const interval = setInterval(updateTournamentCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [tournamentStartDate]);
 
   // Get player's highest MMR to check eligibility
   const highestMMR = Math.max(playerData.mmr['1v1'], playerData.mmr['2v2'], playerData.mmr['3v3']);
@@ -140,6 +176,13 @@ export function RCCSTournamentScreen() {
         </div>
         
         <div className="text-right space-y-2">
+          <div>
+            <div className="text-sm text-cyan-400">Tournament Starts In</div>
+            <div className="flex items-center gap-1 text-xl font-bold text-cyan-400">
+              <Flame className="h-5 w-5" />
+              {timeUntilTournamentStart}
+            </div>
+          </div>
           <div>
             <div className="text-sm text-gray-400">Season Ends In</div>
             <div className="flex items-center gap-1 text-lg font-bold text-white">
