@@ -4,6 +4,7 @@ import { usePlayerData } from '../stores/usePlayerData';
 import { useTournament } from '../stores/useTournament';
 import { generateAIOpponents, simulateAIClicks } from '../utils/aiOpponents';
 import { calculateMMRChange } from '../utils/rankingSystem';
+import { processAIMMRChanges } from '../utils/rankedAI';
 import { getTitleStyle, formatTitleStyle } from '../utils/titleUtils';
 import { setPageTitle, resetPageTitle } from '../utils/pageTitle';
 import { Button } from './ui/button';
@@ -17,7 +18,7 @@ interface GameState {
   playerScore: number;
   teamScore: number;
   opponentTeamScore: number;
-  opponents: Array<{ name: string; score: number; isAI: boolean; isTeammate: boolean; hasForfeited?: boolean; title?: string; mmr?: number }>;
+  opponents: Array<{ name: string; score: number; isAI: boolean; isTeammate: boolean; hasForfeited?: boolean; title?: string; mmr?: number; rankedId?: string }>;
   dontClickMode: boolean;
   dontClickStartTime: number;
 }
@@ -352,6 +353,9 @@ export function GameScreen() {
             gameState.opponents.filter(o => !o.isTeammate).map(() => currentMMR)
           );
           updateMMR(gameMode!, mmrChange);
+          
+          // Process MMR changes for ranked AI opponents
+          processAIMMRChanges(gameState.opponents, isWin, gameMode!);
         }
         updateStats(gameMode!, isWin);
       }

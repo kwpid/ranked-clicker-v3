@@ -1,4 +1,11 @@
 // AI opponent generation and behavior simulation
+import { 
+  ELITE_RANKED_AI, 
+  CASUAL_AI_NAMES, 
+  getRankedAIInRange, 
+  shouldUseRankedAI, 
+  type RankedAI 
+} from './rankedAI';
 
 const AI_NAMES = [
   "L", "kupid", "l0st", "jayleng", "weweewew", "RisingPhoinex87", "dr.1", "prot", "hunt", "kif", "?", "rivverott", "1x Dark", "Moxxy!", "ä", "شغثغخ", "dark!", "Vortex", "FlickMaster17", "r", "Skywave!", "R3tr0", "TurboClash893", "Zynk", "Null_Force", "Orbital", "Boosted", "GravyTrain", "NitroNinja", "PixelPlay", "PhantomX", "Fury", "Zero!", "Moonlight", "QuickTap", "v1per", "Slugger", "MetaDrift", "Hydra", "Neo!", "ShadowDart", "SlipStream", "F1ick", "Karma", "Sparkz", "Glitch", "Dash7", "Ignite", "Cyclone", "Nova", "Opt1c", "Viral", "Stormz", "PyroBlast", "Bl1tz", "Echo", "Hover", "PulseRider", "yumi", "drali", "wez", "brickbybrick", "Rw9", "dark", "mawykzy!", "Speed", ".", "koto", "dani", "Qwert (OG)", "dr.k", "Void", "moon.", "Lru", "Kha0s", "rising.", "?", "dynamo", "f", "Hawk!", "newpo", "zen", "v", "a7md", "sieko", "Mino", "dyinq", "toxin", "Bez", "velocity", "Chronic", "Flinch", "vatsi", "Xyzle", "ca$h", "Darkmode", "nu3.", "LetsG0Brand0n", "VAWQK.", "helu30", "wizz", "Sczribbles.", "7up", "unkown", "t0es", "Jynx.", "Zapz", "Aur0", "Knight", "Cliqz", "Pyro.", "dash!", "ven", "flow.", "zenith", "volty", "Aqua!", "Styx", "cheeseboi", "Heat.", "Slyde", "fl1p", "Otto", "jetz", "Crisp", "snailracer", "Flickz", "tempo", "Blaze.", "skyfall", "steam", "storm", "rek:3", "vyna1", "deltairlines", "ph", "trace", "avidic", "tekk!", "fluwo", "climp?", "zark", "diza", "O", "Snooze", "gode", "cola", "hush(!)", "sh4oud", "vvv", "critt", "darkandlost2009", "pulse jubbo", "pl havicic", "ryft.", "Lyric", "dryft.", "horiz", "zeno", "octane", "wavetidess", "loster", "mamba", "Jack", "innadeze", "s", "offtenlost", "bivo", "Trace", "Talon", ".", "{?}", "rraze", "Dark{?}", "zenhj", "rinshoros bf", "Cipher", "nova", "juzz", "officer", "strike", "Titan", "comp", "pahnton", "Mirage", "space", "boltt", "reeper", "piza", "cheese.", "frostbite", "warthunderisbest", "eecipe", "quantum", "vexz", "zylo", "frzno", "blurr", "scythe!", "wvr", "nxt", "griz", "jolt", "sift", "kryo", "wvn", "brixx", "twixt", "nyx", "slyth", "drex", "qwi", "voxx", "triz", "jynx", "plyx", "kryp", "zex", "brix", "twixz", "vyn", "sypher", "jyn", "qry", "neoo", "kwpid",
@@ -11,6 +18,7 @@ export interface AIOpponent {
   isTeammate: boolean;
   title?: string;
   mmr?: number;
+  rankedId?: string; // ID for persistent ranked AI
 }
 
 export function generateAIOpponents(gameMode: '1v1' | '2v2' | '3v3', playerMMR: number, currentSeason: number = 1): AIOpponent[] {
@@ -20,30 +28,68 @@ export function generateAIOpponents(gameMode: '1v1' | '2v2' | '3v3', playerMMR: 
   const totalPlayers = parseInt(gameMode.charAt(0)) * 2; // 1v1 = 2, 2v2 = 4, 3v3 = 6
   const teamSize = parseInt(gameMode.charAt(0)); // 1, 2, or 3
   
+  // Check if we should use ranked AI (for high MMR players)
+  const useRankedAI = shouldUseRankedAI(playerMMR, gameMode);
+  const availableRankedAI = useRankedAI ? getRankedAIInRange(playerMMR, gameMode) : [];
+  
   // Generate teammates (if any)
   for (let i = 1; i < teamSize; i++) {
-    const teammateMMR = generateOpponentMMR(playerMMR, true);
-    opponents.push({
-      name: getRandomAIName(opponents),
-      score: 0,
-      isAI: true,
-      isTeammate: true,
-      title: getRandomAITitle(teammateMMR, currentSeason),
-      mmr: teammateMMR,
-    });
+    if (useRankedAI && availableRankedAI.length > 0 && Math.random() < 0.7) {
+      // 70% chance to use ranked AI for teammates
+      const rankedAI = availableRankedAI[Math.floor(Math.random() * availableRankedAI.length)];
+      opponents.push({
+        name: rankedAI.name,
+        score: 0,
+        isAI: true,
+        isTeammate: true,
+        title: rankedAI.title,
+        mmr: rankedAI.currentMMR[gameMode],
+        rankedId: rankedAI.id,
+      });
+      // Remove from available pool to avoid duplicates
+      availableRankedAI.splice(availableRankedAI.indexOf(rankedAI), 1);
+    } else {
+      // Use traditional AI generation
+      const teammateMMR = generateOpponentMMR(playerMMR, true);
+      opponents.push({
+        name: getRandomAIName(opponents),
+        score: 0,
+        isAI: true,
+        isTeammate: true,
+        title: getRandomAITitle(teammateMMR, currentSeason),
+        mmr: teammateMMR,
+      });
+    }
   }
   
   // Generate enemy team
   for (let i = 0; i < teamSize; i++) {
-    const enemyMMR = generateOpponentMMR(playerMMR, false);
-    opponents.push({
-      name: getRandomAIName(opponents),
-      score: 0,
-      isAI: true,
-      isTeammate: false,
-      title: getRandomAITitle(enemyMMR, currentSeason),
-      mmr: enemyMMR,
-    });
+    if (useRankedAI && availableRankedAI.length > 0 && Math.random() < 0.8) {
+      // 80% chance to use ranked AI for enemies (slightly higher than teammates)
+      const rankedAI = availableRankedAI[Math.floor(Math.random() * availableRankedAI.length)];
+      opponents.push({
+        name: rankedAI.name,
+        score: 0,
+        isAI: true,
+        isTeammate: false,
+        title: rankedAI.title,
+        mmr: rankedAI.currentMMR[gameMode],
+        rankedId: rankedAI.id,
+      });
+      // Remove from available pool to avoid duplicates
+      availableRankedAI.splice(availableRankedAI.indexOf(rankedAI), 1);
+    } else {
+      // Use traditional AI generation
+      const enemyMMR = generateOpponentMMR(playerMMR, false);
+      opponents.push({
+        name: getRandomAIName(opponents),
+        score: 0,
+        isAI: true,
+        isTeammate: false,
+        title: getRandomAITitle(enemyMMR, currentSeason),
+        mmr: enemyMMR,
+      });
+    }
   }
   
   return opponents;
@@ -108,25 +154,36 @@ function getRandomAITitle(aiMMR: number, currentSeason: number = 1): string {
   // RCCS titles for Grand Champion+ based on MMR and current season
   const RCCS_TITLES: string[] = [];
   if (aiRankIndex >= 6) { // Grand Champion or higher
-    for (let season = 1; season <= currentSeason; season++) {
-      if (aiMMR >= 2950) {
-        // Elite MMR - World Champion level titles (3k max)
-        RCCS_TITLES.push(`RCCS S${season} WORLD CHAMPION`);
-        RCCS_TITLES.push(`RCCS S${season} WORLDS FINALIST`);
-      } else if (aiMMR >= 2850) {
-        // High MMR - Major Champion level titles
-        RCCS_TITLES.push(`RCCS S${season} MAJOR CHAMPION`);
-        RCCS_TITLES.push(`RCCS S${season} WORLD CHALLENGER`);
-        RCCS_TITLES.push(`RCCS S${season} MAJOR CONTENDER`);
-      } else if (aiMMR >= 2700) {
-        // Good MMR - Regional Champion level titles
-        RCCS_TITLES.push(`RCCS S${season} REGIONAL CHAMPION`);
-        RCCS_TITLES.push(`RCCS S${season} REGIONAL ELITE`);
-        RCCS_TITLES.push(`RCCS S${season} REGIONAL FINALIST`);
-      } else {
-        // Lower Grand Champion MMR - Qualifier titles
-        RCCS_TITLES.push(`RCCS S${season} CONTENDER`);
-        RCCS_TITLES.push(`RCCS S${season} CHALLENGER`);
+    // Some Grand Champions don't use RCCS titles (30% chance to skip)
+    const usesRCCSTitle = Math.random() > 0.3;
+    
+    if (usesRCCSTitle) {
+      for (let season = 1; season <= currentSeason; season++) {
+        if (aiMMR >= 2950) {
+          // Elite MMR - World Champion level titles (3k max) - weighted heavily
+          RCCS_TITLES.push(`RCCS S${season} WORLD CHAMPION`);
+          RCCS_TITLES.push(`RCCS S${season} WORLD CHAMPION`);
+          RCCS_TITLES.push(`RCCS S${season} WORLDS FINALIST`);
+        } else if (aiMMR >= 2850) {
+          // High MMR - Major Champion level titles - good weighting
+          RCCS_TITLES.push(`RCCS S${season} MAJOR CHAMPION`);
+          RCCS_TITLES.push(`RCCS S${season} MAJOR CHAMPION`);
+          RCCS_TITLES.push(`RCCS S${season} WORLD CHALLENGER`);
+          RCCS_TITLES.push(`RCCS S${season} MAJOR CONTENDER`);
+        } else if (aiMMR >= 2700) {
+          // Good MMR - Regional Champion level titles
+          RCCS_TITLES.push(`RCCS S${season} REGIONAL CHAMPION`);
+          RCCS_TITLES.push(`RCCS S${season} REGIONAL ELITE`);
+          RCCS_TITLES.push(`RCCS S${season} REGIONAL FINALIST`);
+        } else if (aiMMR >= 2400) {
+          // Mid Grand Champion MMR - Qualifier titles  
+          RCCS_TITLES.push(`RCCS S${season} CONTENDER`);
+          RCCS_TITLES.push(`RCCS S${season} CHALLENGER`);
+        } else {
+          // Lower Grand Champion MMR - Basic participant titles
+          RCCS_TITLES.push(`RCCS S${season} PARTICIPANT`);
+          RCCS_TITLES.push(`RCCS S${season} QUALIFIER`);
+        }
       }
     }
   }
