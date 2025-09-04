@@ -104,6 +104,32 @@ function getRandomAITitle(aiMMR: number, currentSeason: number = 1): string {
       TOURNAMENT_TITLES.push(`S${season} ${rank.toUpperCase()} TOURNAMENT WINNER`);
     }
   }
+
+  // RCCS titles for Grand Champion+ based on MMR and current season
+  const RCCS_TITLES: string[] = [];
+  if (aiRankIndex >= 6) { // Grand Champion or higher
+    for (let season = 1; season <= currentSeason; season++) {
+      if (aiMMR >= 3500) {
+        // Elite MMR - World Champion level titles
+        RCCS_TITLES.push(`RCCS S${season} WORLD CHAMPION`);
+        RCCS_TITLES.push(`RCCS S${season} WORLDS FINALIST`);
+      } else if (aiMMR >= 3200) {
+        // High MMR - Major Champion level titles
+        RCCS_TITLES.push(`RCCS S${season} MAJOR CHAMPION`);
+        RCCS_TITLES.push(`RCCS S${season} WORLD CHALLENGER`);
+        RCCS_TITLES.push(`RCCS S${season} MAJOR CONTENDER`);
+      } else if (aiMMR >= 2900) {
+        // Good MMR - Regional Champion level titles
+        RCCS_TITLES.push(`RCCS S${season} REGIONAL CHAMPION`);
+        RCCS_TITLES.push(`RCCS S${season} REGIONAL ELITE`);
+        RCCS_TITLES.push(`RCCS S${season} REGIONAL FINALIST`);
+      } else {
+        // Lower Grand Champion MMR - Qualifier titles
+        RCCS_TITLES.push(`RCCS S${season} CONTENDER`);
+        RCCS_TITLES.push(`RCCS S${season} CHALLENGER`);
+      }
+    }
+  }
   
   // Weight the probabilities based on rank - higher ranks prefer season/tournament titles
   const titleCategories = [];
@@ -132,18 +158,24 @@ function getRandomAITitle(aiMMR: number, currentSeason: number = 1): string {
       titleCategories.push(...TOURNAMENT_TITLES);
     }
   } else {
-    // Champion/Grand Champion - prefer prestigious titles (20% level, 50% season, 30% tournament)
-    for (let i = 0; i < 2; i++) {
+    // Champion/Grand Champion - prefer prestigious titles (10% level, 30% season, 20% tournament, 40% RCCS)
+    for (let i = 0; i < 1; i++) {
       titleCategories.push(...LEVEL_TITLES);
     }
     if (SEASON_TITLES.length > 0) {
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 3; i++) {
         titleCategories.push(...SEASON_TITLES);
       }
     }
     if (TOURNAMENT_TITLES.length > 0) {
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 2; i++) {
         titleCategories.push(...TOURNAMENT_TITLES);
+      }
+    }
+    // RCCS titles get high priority for Grand Champion+ AI opponents
+    if (RCCS_TITLES.length > 0) {
+      for (let i = 0; i < 4; i++) {
+        titleCategories.push(...RCCS_TITLES);
       }
     }
     

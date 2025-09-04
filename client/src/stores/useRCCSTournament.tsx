@@ -346,9 +346,9 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
             // Pro-level simulation: 3K+ MMR teams have significant advantages
             const mmrDiff = b.averageMMR - a.averageMMR;
             
-            // Pro level bonus (3K+ MMR gets major advantage)
-            const bProBonus = b.averageMMR >= 3000 ? 200 : 0;
-            const aProBonus = a.averageMMR >= 3000 ? 200 : 0;
+            // Pro level bonus (2.8K+ MMR gets major advantage)
+            const bProBonus = b.averageMMR >= 2800 ? 200 : 0;
+            const aProBonus = a.averageMMR >= 2800 ? 200 : 0;
             const proAdvantage = bProBonus - aProBonus;
             
             // Reduced randomness, skill matters more
@@ -416,8 +416,8 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
             const mmrDiff = b.averageMMR - a.averageMMR;
             
             // Pro level bonus - even more important at regionals
-            const bProBonus = b.averageMMR >= 3000 ? 300 : 0;
-            const aProBonus = a.averageMMR >= 3000 ? 300 : 0;
+            const bProBonus = b.averageMMR >= 2800 ? 300 : 0;
+            const aProBonus = a.averageMMR >= 2800 ? 300 : 0;
             const proAdvantage = bProBonus - aProBonus;
             
             // Less randomness as competition gets harder
@@ -465,9 +465,9 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
           const sortedTeams = [...tournament.teams].sort((a, b) => {
             const mmrDiff = b.averageMMR - a.averageMMR;
             
-            // Pro level dominance at majors - 3K+ teams heavily favored
-            const bProBonus = b.averageMMR >= 3000 ? 400 : 0;
-            const aProBonus = a.averageMMR >= 3000 ? 400 : 0;
+            // Pro level dominance at majors - 2.8K+ teams heavily favored
+            const bProBonus = b.averageMMR >= 2800 ? 400 : 0;
+            const aProBonus = a.averageMMR >= 2800 ? 400 : 0;
             const proAdvantage = bProBonus - aProBonus;
             
             // Minimal randomness at major level
@@ -515,8 +515,8 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
             const mmrDiff = b.averageMMR - a.averageMMR;
             
             // At worlds, only the elite survive - massive pro bonus
-            const bProBonus = b.averageMMR >= 3000 ? 500 : 0;
-            const aProBonus = a.averageMMR >= 3000 ? 500 : 0;
+            const bProBonus = b.averageMMR >= 2800 ? 500 : 0;
+            const aProBonus = a.averageMMR >= 2800 ? 500 : 0;
             const proAdvantage = bProBonus - aProBonus;
             
             // Very little randomness at the highest level
