@@ -524,7 +524,7 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
               maxTeams: 12,
               rewards: RCCS_REWARDS.majors.map(r => ({
                 ...r,
-                title: r.title.replace('{season}', tournament.season.toString()).replace('{location}', majorLocation)
+                title: r.title.replace('{season}', tournament.season.toString()).replace('{location}', majorLocation || 'UNKNOWN')
               })),
             };
             
@@ -835,6 +835,18 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
           notifications: [],
           seasonEndDate: new Date(Date.now() + 28 * 24 * 60 * 60 * 1000),
           tournamentStartDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // 3 weeks from now (1 week before season end)
+          // Reassign new major locations for this season
+          seasonMajorLocations: MAJOR_LOCATIONS.sort(() => Math.random() - 0.5).slice(0, 2),
+          // Reset available tournaments
+          availableRegionals: [1, 2, 3, 4],
+          availableMajors: [1, 2],
+          // Reset elite tracking
+          playerEliteTracking: {
+            regionalTop3Count: 0,
+            majorTop3Count: 0,
+            worldsTop3Count: 0,
+            hasEliteTitle: false,
+          },
         }));
         
         // Initialize new season's tournament system
