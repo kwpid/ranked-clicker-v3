@@ -375,7 +375,8 @@ export function TournamentScreen() {
                   <div>
                     <div className={`font-bold text-sm ${
                       title.color === 'golden' ? 'text-yellow-400' : 
-                      title.color === 'green' ? 'text-green-400' : 'text-white'
+                      title.color === 'green' ? 'text-green-400' : 
+                      title.color === 'aqua' ? 'text-cyan-400' : 'text-white'
                     }`}>
                       {title.name}
                     </div>
@@ -385,7 +386,8 @@ export function TournamentScreen() {
                   </div>
                   <Trophy className={`h-4 w-4 ${
                     title.color === 'golden' ? 'text-yellow-400' : 
-                    title.color === 'green' ? 'text-green-400' : 'text-gray-400'
+                    title.color === 'green' ? 'text-green-400' : 
+                    title.color === 'aqua' ? 'text-cyan-400' : 'text-gray-400'
                   }`} />
                 </div>
               ))}

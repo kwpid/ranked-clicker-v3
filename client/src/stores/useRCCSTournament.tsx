@@ -84,7 +84,8 @@ interface RCCSTournamentStore {
   simulateMatch: (team1: RCCSTeam, team2: RCCSTeam) => RCCSMatch;
   advanceTournament: () => void;
   calculateRewards: (tournament: RCCSTournament) => void;
-  awardRCCSTitle: (titleName: string, placement: number, stage: string) => void;
+  awardRCCSTitle: (titleName: string, placement: number, stage: string, titleColor?: string) => void;
+  getCascadingTitles: (stage: string, earnedReward: RCCSTournamentReward) => RCCSTournamentReward[];
   dismissNotification: (notificationId: string) => void;
   
   // Debug/Testing
@@ -94,22 +95,22 @@ interface RCCSTournamentStore {
 // Tournament reward definitions
 const RCCS_REWARDS: Record<string, RCCSTournamentReward[]> = {
   qualifiers: [
-    { placement: 60, title: 'RCCS S{season} Challenger', color: '#87CEEB', hasGlow: false, minPlacement: 33, maxPlacement: 60 },
-    { placement: 32, title: 'RCCS S{season} Contender', color: '#00FFFF', hasGlow: true, minPlacement: 1, maxPlacement: 32 },
+    { placement: 60, title: 'RCCS S{season} CHALLENGER', color: '#00FFFF', hasGlow: true, minPlacement: 33, maxPlacement: 60 },
+    { placement: 32, title: 'RCCS S{season} CONTENDER', color: '#00FFFF', hasGlow: true, minPlacement: 1, maxPlacement: 32 },
   ],
   regionals: [
-    { placement: 16, title: 'RCCS S{season} Regional Finalist', color: '#00FFFF', hasGlow: true, minPlacement: 9, maxPlacement: 16 },
-    { placement: 8, title: 'RCCS S{season} Regional Elite', color: '#00FFFF', hasGlow: true, minPlacement: 3, maxPlacement: 8 },
-    { placement: 1, title: 'RCCS S{season} Regional Champion', color: '#00FFFF', hasGlow: true, minPlacement: 1, maxPlacement: 1 },
+    { placement: 16, title: 'RCCS S{season} REGIONAL FINALIST', color: '#00FFFF', hasGlow: true, minPlacement: 9, maxPlacement: 16 },
+    { placement: 8, title: 'RCCS S{season} REGIONAL ELITE', color: '#00FFFF', hasGlow: true, minPlacement: 3, maxPlacement: 8 },
+    { placement: 1, title: 'RCCS S{season} REGIONAL CHAMPION', color: '#00FFFF', hasGlow: true, minPlacement: 1, maxPlacement: 1 },
   ],
   majors: [
-    { placement: 12, title: 'RCCS S{season} Major Contender', color: '#00FFFF', hasGlow: true, minPlacement: 7, maxPlacement: 12 },
-    { placement: 6, title: 'RCCS S{season} World Challenger', color: '#00FFFF', hasGlow: true, minPlacement: 2, maxPlacement: 6 },
-    { placement: 1, title: 'RCCS S{season} Major Champion', color: '#00FFFF', hasGlow: true, minPlacement: 1, maxPlacement: 1 },
+    { placement: 12, title: 'RCCS S{season} MAJOR CONTENDER', color: '#00FFFF', hasGlow: true, minPlacement: 7, maxPlacement: 12 },
+    { placement: 6, title: 'RCCS S{season} WORLD CHALLENGER', color: '#00FFFF', hasGlow: true, minPlacement: 2, maxPlacement: 6 },
+    { placement: 1, title: 'RCCS S{season} MAJOR CHAMPION', color: '#00FFFF', hasGlow: true, minPlacement: 1, maxPlacement: 1 },
   ],
   worlds: [
-    { placement: 4, title: 'RCCS S{season} Worlds Finalist', color: '#00FFFF', hasGlow: true, minPlacement: 2, maxPlacement: 4 },
-    { placement: 1, title: 'RCCS S{season} World Champion', color: '#00FFFF', hasGlow: true, minPlacement: 1, maxPlacement: 1 },
+    { placement: 4, title: 'RCCS S{season} WORLDS FINALIST', color: '#00FFFF', hasGlow: true, minPlacement: 2, maxPlacement: 4 },
+    { placement: 1, title: 'RCCS S{season} WORLD CHAMPION', color: '#00FFFF', hasGlow: true, minPlacement: 1, maxPlacement: 1 },
   ],
 };
 
@@ -509,25 +510,43 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
         // Award titles to players based on their placement
         tournament.teams.forEach(team => {
           if (team.placement && team.id === get().playerTeam?.id) {
-            // This is the player's team, award them the title
+            // This is the player's team, award them the title(s)
+            const earnedTitles: RCCSTournamentReward[] = [];
+            
+            // Determine the highest tier title earned
+            let highestTierReward: RCCSTournamentReward | null = null;
             for (const reward of tournament.rewards) {
               if (team.placement >= reward.minPlacement && team.placement <= reward.maxPlacement) {
-                // Award the RCCS title to the player
-                get().awardRCCSTitle(reward.title, team.placement, tournament.stage);
-                console.log(`🏆 Player earned RCCS title: ${reward.title} (Placement: ${team.placement})`);
+                highestTierReward = reward;
                 break;
               }
+            }
+            
+            if (highestTierReward) {
+              // Award the earned title
+              earnedTitles.push(highestTierReward);
+              
+              // Award cascading titles based on tournament stage
+              const cascadingTitles = get().getCascadingTitles(tournament.stage, highestTierReward);
+              earnedTitles.push(...cascadingTitles);
+              
+              // Award all earned titles
+              earnedTitles.forEach(titleReward => {
+                get().awardRCCSTitle(titleReward.title, team.placement!, tournament.stage, titleReward.color);
+                console.log(`🏆 Player earned RCCS title: ${titleReward.title} (Placement: ${team.placement})`);
+              });
             }
           }
         });
       },
 
-      awardRCCSTitle: (titleName: string, placement: number, stage: string) => {
+      awardRCCSTitle: (titleName: string, placement: number, stage: string, titleColor?: string) => {
         // Get the tournament store to award the title
         const tournamentStore = useTournament.getState();
         
         // Create a unique title ID for RCCS titles
-        const titleId = `rccs-s${get().currentSeason}-${stage}-p${placement}`;
+        const normalizedTitleName = titleName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+        const titleId = `rccs-s${get().currentSeason}-${normalizedTitleName}`;
         
         // Check if title already exists
         const existingTitle = tournamentStore.tournamentTitles.find(t => t.id === titleId);
@@ -536,14 +555,14 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
           return;
         }
 
-        // Create the RCCS title
+        // Create the RCCS title with aqua color and glow
         const rccsTitle = {
           id: titleId,
-          name: titleName,
+          name: titleName.toUpperCase(), // Ensure ALL CAPS
           season: get().currentSeason,
           rank: 'RCCS',
           wins: 1,
-          color: 'golden' as const, // All RCCS titles are prestigious (golden)
+          color: 'aqua' as const, // All RCCS titles are aqua with glow
           dateAwarded: new Date().toISOString()
         };
 
@@ -553,6 +572,70 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
         }));
 
         console.log(`✅ Successfully awarded RCCS title: ${titleName}`);
+      },
+
+      getCascadingTitles: (stage: string, earnedReward: RCCSTournamentReward) => {
+        const cascadingTitles: RCCSTournamentReward[] = [];
+        const currentSeason = get().currentSeason;
+        
+        // Define the hierarchy of tournament stages and their rewards
+        const stageHierarchy = ['qualifiers', 'regionals', 'majors', 'worlds'];
+        const currentStageIndex = stageHierarchy.indexOf(stage);
+        
+        if (currentStageIndex === -1) return cascadingTitles;
+        
+        // Award all lower tier titles based on what was earned
+        for (let i = 0; i < currentStageIndex; i++) {
+          const lowerStage = stageHierarchy[i];
+          const lowerStageRewards = RCCS_REWARDS[lowerStage];
+          
+          if (lowerStageRewards) {
+            // For each lower stage, award the highest tier title from that stage
+            const highestReward = lowerStageRewards[lowerStageRewards.length - 1]; // Last reward is usually highest
+            if (highestReward) {
+              const cascadingReward = {
+                ...highestReward,
+                title: highestReward.title.replace('{season}', currentSeason.toString())
+              };
+              cascadingTitles.push(cascadingReward);
+            }
+          }
+        }
+        
+        // Special cascading logic for specific achievements
+        if (stage === 'regionals') {
+          // If you make regionals, you get contender status
+          const contenderTitle = RCCS_REWARDS.qualifiers.find(r => r.title.includes('CONTENDER'));
+          if (contenderTitle) {
+            const cascadingContender = {
+              ...contenderTitle,
+              title: contenderTitle.title.replace('{season}', currentSeason.toString())
+            };
+            cascadingTitles.push(cascadingContender);
+          }
+        } else if (stage === 'majors') {
+          // If you make majors, you get regional finalist status
+          const regionalsFinalist = RCCS_REWARDS.regionals.find(r => r.title.includes('FINALIST'));
+          if (regionalsFinalist) {
+            const cascadingFinalist = {
+              ...regionalsFinalist,
+              title: regionalsFinalist.title.replace('{season}', currentSeason.toString())
+            };
+            cascadingTitles.push(cascadingFinalist);
+          }
+        } else if (stage === 'worlds') {
+          // If you make worlds, you get major contender status
+          const majorContender = RCCS_REWARDS.majors.find(r => r.title.includes('CONTENDER'));
+          if (majorContender) {
+            const cascadingMajor = {
+              ...majorContender,
+              title: majorContender.title.replace('{season}', currentSeason.toString())
+            };
+            cascadingTitles.push(cascadingMajor);
+          }
+        }
+        
+        return cascadingTitles;
       },
 
       dismissNotification: (notificationId: string) => {

@@ -34,7 +34,7 @@ export interface TournamentTitle {
   season: number;
   rank: string;
   wins: number;
-  color: 'default' | 'green' | 'golden';
+  color: 'default' | 'green' | 'golden' | 'aqua';
   dateAwarded: string;
 }
 

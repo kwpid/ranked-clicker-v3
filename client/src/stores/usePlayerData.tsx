@@ -325,8 +325,8 @@ export const usePlayerData = create<PlayerDataStore>()(
             name: tournamentTitle.name,
             color: tournamentTitle.color === 'golden' ? '#FFD700' : 
                    tournamentTitle.color === 'green' ? '#10B981' :
-                   tournamentTitle.name.includes('RCCS S') ? '#00FFFF' : '#9CA3AF',
-            glow: tournamentTitle.color === 'golden' || tournamentTitle.name.includes('RCCS S'),
+                   tournamentTitle.color === 'aqua' ? '#00FFFF' : '#9CA3AF',
+            glow: tournamentTitle.color === 'golden' || tournamentTitle.color === 'aqua',
             type: 'tournament' as const,
           }))
         );
