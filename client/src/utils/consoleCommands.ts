@@ -63,6 +63,27 @@ export const initializeConsoleCommands = () => {
       console.log(`⬆️ Boosted all playlists to ${targetMMR} MMR (Champion III)`);
     },
 
+    // Set MMR for all playlists
+    setMMR: async (mmr: number) => {
+      if (typeof mmr !== 'number' || mmr < 0) {
+        console.log('❌ Invalid MMR value. Please provide a positive number.');
+        return;
+      }
+
+      const store = usePlayerData.getState();
+      
+      store.updateMMR('1v1', mmr - store.playerData.mmr['1v1']);
+      store.updateMMR('2v2', mmr - store.playerData.mmr['2v2']);
+      store.updateMMR('3v3', mmr - store.playerData.mmr['3v3']);
+      
+      console.log(`🎯 Set all playlists to ${mmr} MMR`);
+      
+      // Show rank info for the new MMR
+      const { getRankInfo } = await import('../utils/rankingSystem');
+      const rankInfo = getRankInfo(mmr);
+      console.log(`📈 New Rank: ${rankInfo.name} ${rankInfo.division}`);
+    },
+
     // Get current tournament status
     status: () => {
       const store = useRCCSTournament.getState();
@@ -93,12 +114,19 @@ export const initializeConsoleCommands = () => {
   rccs.register()          - Register player for tournament
   rccs.advance()           - Advance to next tournament stage
   rccs.boostToChampion()   - Boost player to Champion III MMR
+  rccs.setMMR(mmr)         - Set MMR for all playlists (e.g. rccs.setMMR(3000))
 
 🎯 Quick Test Flow:
   1. rccs.boostToChampion()  // Get eligible rank
   2. rccs.startTournament()  // Start tournament
   3. rccs.register()         // Register for tournament
-  4. rccs.advance()          // Simulate tournament stages`);
+  4. rccs.advance()          // Simulate tournament stages
+
+💡 MMR Examples:
+  rccs.setMMR(1200)        // Bronze
+  rccs.setMMR(1800)        // Gold
+  rccs.setMMR(2400)        // Champion III
+  rccs.setMMR(3000)        // Grand Champion`);
     }
   };
 
