@@ -235,14 +235,14 @@ export function simulateAIClicks(aiMMR: number, playerCPS: number): number {
       baseCPS = 8 + Math.random() * 2;
     }
   } else {
-    // Grand Champion - Adapts to player CPS ±2 but with 8-17 CPS range
+    // Grand Champion - Adapts to player CPS ±3 but with 10-25 CPS range
     if (playerCPS > 0) {
-      const adaptiveMin = Math.max(8, playerCPS - 2); // Minimum 8 CPS, player CPS - 2
-      const adaptiveMax = Math.min(17, Math.max(12, playerCPS + 2)); // Maximum 17 CPS, minimum 12 CPS max
+      const adaptiveMin = Math.max(10, playerCPS - 3); // Minimum 10 CPS, player CPS - 3
+      const adaptiveMax = Math.min(25, Math.max(15, playerCPS + 3)); // Maximum 25 CPS, minimum 15 CPS max
       baseCPS = adaptiveMin + Math.random() * (adaptiveMax - adaptiveMin);
     } else {
       // Fallback if no player CPS data
-      baseCPS = 8 + Math.random() * 9; // 8-17 CPS range
+      baseCPS = 10 + Math.random() * 15; // 10-25 CPS range
     }
   }
   
