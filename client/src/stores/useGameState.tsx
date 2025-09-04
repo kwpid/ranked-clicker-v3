@@ -10,7 +10,7 @@ interface TournamentContext {
 }
 
 interface GameState {
-  currentScreen: 'main' | 'queue' | 'game' | 'leaderboard' | 'tournaments' | 'tournament-bracket' | 'news';
+  currentScreen: 'main' | 'queue' | 'game' | 'leaderboard' | 'tournaments' | 'tournament-bracket' | 'rccs' | 'news';
   queueMode: 'casual' | 'ranked' | 'tournament' | null;
   gameMode: '1v1' | '2v2' | '3v3' | null;
   showStatsModal: boolean;
@@ -24,7 +24,7 @@ interface GameState {
   }>;
   tournamentContext: TournamentContext;
   
-  setCurrentScreen: (screen: 'main' | 'queue' | 'game' | 'leaderboard' | 'tournaments' | 'tournament-bracket' | 'news') => void;
+  setCurrentScreen: (screen: 'main' | 'queue' | 'game' | 'leaderboard' | 'tournaments' | 'tournament-bracket' | 'rccs' | 'news') => void;
   setQueueMode: (mode: 'casual' | 'ranked' | 'tournament') => void;
   setGameMode: (mode: '1v1' | '2v2' | '3v3') => void;
   setShowStatsModal: (show: boolean) => void;

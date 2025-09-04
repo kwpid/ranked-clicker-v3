@@ -1,0 +1,106 @@
+Add a tournament simulation called the RCCS (Ranked Clicker Championship Series).
+
+🔹 Timing & Access
+
+The RCCS happens one week before the end of each season.
+
+Only players Champion III or higher can sign up.
+
+When a season starts, a persistent notification appears:
+
+Player must sign up or decline to clear it.
+
+Add a console command to force start a season (for testing/debug).
+
+🔹 Tournament Flow
+
+Format: 3v3, RLCS-style system with qualifiers, regionals, majors, and worlds.
+
+Each team = 3 players (player + 2 AI).
+
+About 128 AI teams compete per qualifier.
+
+Higher average team MMR = higher chance of success.
+
+Example: A team avg. of 3,800 MMR is “pro-level” and usually makes Worlds.
+
+Stages
+
+Qualifiers
+
+Open to all teams.
+
+Top 32 teams advance to Regionals.
+
+Regionals (x4)
+
+Each Regional has 32 teams.
+
+Top 6 from Regionals 1 & 2 → Major 1.
+
+Top 6 from Regionals 3 & 4 → Major 2.
+
+Players can enter both sets of Regionals (two chances to qualify).
+
+Majors (x2)
+
+Major 1: 12 teams from Regionals 1 & 2.
+
+Major 2: 12 teams from Regionals 3 & 4.
+
+Top 6 from each → Worlds.
+
+Worlds
+
+12 total teams (6 from each Major).
+
+Crown the RCCS World Champion.
+
+Pipeline:
+Qualifiers → Regionals → Major 1 → Regionals → Major 2 → Worlds
+
+🔹 UI Requirements
+
+Always show:
+
+Current stage (Qualifiers, Regionals, Major, Worlds).
+
+Standings / placement.
+
+Bracket or progression system.
+
+UI should remain available until the RCCS season ends.
+
+If player is DQ’d, they can exit UI anytime.
+
+🔹 Titles & Rewards
+
+Qualifiers
+
+Top 60 → RCCS S# Challenger (light blue)
+
+Top 32 → RCCS S# Contender (aqua glow)
+
+Regionals
+
+Top 16 → RCCS S# Regional Finalist (aqua glow)
+
+Top 8 → RCCS S# Regional Elite (aqua glow)
+
+Winner → RCCS S# Regional Champion (aqua glow)
+
+Majors
+
+Participant → RCCS S# Major Contender (aqua glow)
+
+Top 6 → RCCS S# World Challenger (aqua glow)
+
+Winner → RCCS S# Major Champion (aqua glow)
+
+Worlds
+
+Top 4 → RCCS S# Worlds Finalist (aqua glow)
+
+Winner → RCCS S# World Champion (aqua glow)
+
+(All titles except Challenger are aqua glow to show higher prestige.)

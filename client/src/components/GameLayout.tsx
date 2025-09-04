@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { PlayerCard } from './PlayerCard';
 import { MainMenu } from './MainMenu';
 import { QueueScreen } from './QueueScreen';
@@ -8,12 +8,21 @@ import { LeaderboardScreen } from './LeaderboardScreen';
 import { TournamentScreen } from './TournamentScreen';
 import { TournamentBracket } from './TournamentBracket';
 import { TournamentBanner } from './TournamentBanner';
+import { RCCSTournamentScreen } from './RCCSTournamentScreen';
+import { RCCSNotification } from './RCCSNotification';
 import NewsScreen from './NewsScreen';
 import NewsModal from './NewsModal';
 import { useGameState } from '../stores/useGameState';
+import { useRCCSTournament } from '../stores/useRCCSTournament';
 
 export function GameLayout() {
   const { currentScreen, showStatsModal, setCurrentScreen } = useGameState();
+  const { initializeTournamentSystem } = useRCCSTournament();
+
+  // Initialize RCCS tournament system on app load
+  useEffect(() => {
+    initializeTournamentSystem();
+  }, [initializeTournamentSystem]);
 
   const renderScreen = () => {
     switch (currentScreen) {
@@ -29,6 +38,8 @@ export function GameLayout() {
         return <TournamentScreen />;
       case 'tournament-bracket':
         return <TournamentBracket />;
+      case 'rccs':
+        return <RCCSTournamentScreen />;
       case 'news':
         return <NewsScreen />;
       default:
@@ -39,9 +50,10 @@ export function GameLayout() {
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <TournamentBanner />
+      <RCCSNotification />
       <div className="container mx-auto px-4 py-6">
-        {currentScreen !== 'queue' && currentScreen !== 'game' && currentScreen !== 'leaderboard' && currentScreen !== 'tournaments' && currentScreen !== 'tournament-bracket' && currentScreen !== 'news' && <PlayerCard />}
-        <div className={currentScreen !== 'queue' && currentScreen !== 'game' && currentScreen !== 'leaderboard' && currentScreen !== 'tournaments' && currentScreen !== 'tournament-bracket' && currentScreen !== 'news' ? 'mt-6' : ''}>
+        {currentScreen !== 'queue' && currentScreen !== 'game' && currentScreen !== 'leaderboard' && currentScreen !== 'tournaments' && currentScreen !== 'tournament-bracket' && currentScreen !== 'rccs' && currentScreen !== 'news' && <PlayerCard />}
+        <div className={currentScreen !== 'queue' && currentScreen !== 'game' && currentScreen !== 'leaderboard' && currentScreen !== 'tournaments' && currentScreen !== 'tournament-bracket' && currentScreen !== 'rccs' && currentScreen !== 'news' ? 'mt-6' : ''}>
           {renderScreen()}
         </div>
       </div>

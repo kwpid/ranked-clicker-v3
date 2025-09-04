@@ -1,0 +1,516 @@
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { getRankInfo } from '../utils/rankingSystem';
+
+// RCCS Tournament System - Ranked Clicker Championship Series
+// Format: 3v3 RLCS-style tournament with Qualifiers → Regionals → Majors → Worlds
+
+interface RCCSTeam {
+  id: string;
+  playerName: string;
+  playerMMR: number;
+  teammate1: { name: string; mmr: number };
+  teammate2: { name: string; mmr: number };
+  averageMMR: number;
+  eliminated: boolean;
+  placement?: number;
+}
+
+interface RCCSTournament {
+  id: string;
+  season: number;
+  stage: 'qualifiers' | 'regionals' | 'majors' | 'worlds';
+  stageNumber?: number; // For multiple regionals/majors
+  teams: RCCSTeam[];
+  matches: RCCSMatch[];
+  status: 'upcoming' | 'registration' | 'active' | 'completed';
+  startDate: Date;
+  endDate?: Date;
+  maxTeams: number;
+  rewards: RCCSTournamentReward[];
+}
+
+interface RCCSMatch {
+  id: string;
+  team1: RCCSTeam;
+  team2: RCCSTeam;
+  winner?: RCCSTeam;
+  round: string;
+  bestOf: number;
+  team1Score: number;
+  team2Score: number;
+  status: 'pending' | 'in-progress' | 'completed';
+}
+
+interface RCCSTournamentReward {
+  placement: number;
+  title: string;
+  color: string;
+  hasGlow: boolean;
+  minPlacement: number;
+  maxPlacement: number;
+}
+
+interface RCCSNotification {
+  id: string;
+  type: 'tournament-signup';
+  season: number;
+  message: string;
+  persistent: boolean;
+  dismissed: boolean;
+  actions: { label: string; action: 'signup' | 'decline' }[];
+}
+
+interface RCCSTournamentStore {
+  // Tournament state
+  currentTournament: RCCSTournament | null;
+  playerRegistered: boolean;
+  playerTeam: RCCSTeam | null;
+  tournamentHistory: RCCSTournament[];
+  notifications: RCCSNotification[];
+  
+  // Season management
+  currentSeason: number;
+  seasonEndDate: Date | null;
+  
+  // Actions
+  initializeTournamentSystem: () => void;
+  startNewSeason: () => void;
+  checkTournamentEligibility: (playerMMR: number) => boolean;
+  registerPlayerForTournament: (playerName: string, playerMMR: number) => void;
+  declineTournamentSignup: () => void;
+  generateAITeams: (count: number, averageMMR: number) => RCCSTeam[];
+  simulateMatch: (team1: RCCSTeam, team2: RCCSTeam) => RCCSMatch;
+  advanceTournament: () => void;
+  calculateRewards: (tournament: RCCSTournament) => void;
+  dismissNotification: (notificationId: string) => void;
+  
+  // Debug/Testing
+  forceStartTournament: (stage: 'qualifiers' | 'regionals' | 'majors' | 'worlds') => void;
+}
+
+// Tournament reward definitions
+const RCCS_REWARDS: Record<string, RCCSTournamentReward[]> = {
+  qualifiers: [
+    { placement: 60, title: 'RCCS S{season} Challenger', color: '#87CEEB', hasGlow: false, minPlacement: 33, maxPlacement: 60 },
+    { placement: 32, title: 'RCCS S{season} Contender', color: '#00FFFF', hasGlow: true, minPlacement: 1, maxPlacement: 32 },
+  ],
+  regionals: [
+    { placement: 16, title: 'RCCS S{season} Regional Finalist', color: '#00FFFF', hasGlow: true, minPlacement: 9, maxPlacement: 16 },
+    { placement: 8, title: 'RCCS S{season} Regional Elite', color: '#00FFFF', hasGlow: true, minPlacement: 3, maxPlacement: 8 },
+    { placement: 1, title: 'RCCS S{season} Regional Champion', color: '#00FFFF', hasGlow: true, minPlacement: 1, maxPlacement: 1 },
+  ],
+  majors: [
+    { placement: 12, title: 'RCCS S{season} Major Contender', color: '#00FFFF', hasGlow: true, minPlacement: 7, maxPlacement: 12 },
+    { placement: 6, title: 'RCCS S{season} World Challenger', color: '#00FFFF', hasGlow: true, minPlacement: 2, maxPlacement: 6 },
+    { placement: 1, title: 'RCCS S{season} Major Champion', color: '#00FFFF', hasGlow: true, minPlacement: 1, maxPlacement: 1 },
+  ],
+  worlds: [
+    { placement: 4, title: 'RCCS S{season} Worlds Finalist', color: '#00FFFF', hasGlow: true, minPlacement: 2, maxPlacement: 4 },
+    { placement: 1, title: 'RCCS S{season} World Champion', color: '#00FFFF', hasGlow: true, minPlacement: 1, maxPlacement: 1 },
+  ],
+};
+
+// Generate AI teammate names
+const generateAITeammateName = (mmr: number): string => {
+  const prefixes = ['Pro', 'Elite', 'Master', 'Ace', 'Turbo', 'Speed', 'Click', 'Storm', 'Blitz', 'Flash'];
+  const suffixes = ['Clicker', 'Master', 'Pro', 'Legend', 'Storm', 'Strike', 'Rush', 'Force', 'Ace', 'King'];
+  
+  const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+  const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+  const number = Math.floor(Math.random() * 999) + 1;
+  
+  return `${prefix}${suffix}${number}`;
+};
+
+// Calculate team success probability based on MMR
+const calculateTeamWinProbability = (team1MMR: number, team2MMR: number): number => {
+  const mmrDiff = team1MMR - team2MMR;
+  // Sigmoid function for win probability
+  return 1 / (1 + Math.exp(-mmrDiff / 200));
+};
+
+export const useRCCSTournament = create<RCCSTournamentStore>()(
+  persist(
+    (set, get) => ({
+      currentTournament: null,
+      playerRegistered: false,
+      playerTeam: null,
+      tournamentHistory: [],
+      notifications: [],
+      currentSeason: 1,
+      seasonEndDate: null,
+
+      initializeTournamentSystem: () => {
+        const now = new Date();
+        // Season lasts 4 weeks, tournament starts 1 week before end
+        const seasonEnd = new Date(now.getTime() + 28 * 24 * 60 * 60 * 1000); // 4 weeks from now
+        const tournamentStart = new Date(seasonEnd.getTime() - 7 * 24 * 60 * 60 * 1000); // 1 week before season end
+        
+        set({ 
+          seasonEndDate: seasonEnd,
+        });
+        
+        // Check if we should show tournament notification
+        const daysUntilTournament = Math.ceil((tournamentStart.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+        
+        if (daysUntilTournament <= 7 && daysUntilTournament >= 0) {
+          const { notifications } = get();
+          const existingNotification = notifications.find(n => n.type === 'tournament-signup' && n.season === get().currentSeason);
+          
+          if (!existingNotification) {
+            const newNotification: RCCSNotification = {
+              id: `tournament-signup-s${get().currentSeason}`,
+              type: 'tournament-signup',
+              season: get().currentSeason,
+              message: `RCCS Season ${get().currentSeason} Tournament begins in ${daysUntilTournament} days! Sign up now (Champion III+ only)`,
+              persistent: true,
+              dismissed: false,
+              actions: [
+                { label: 'Sign Up', action: 'signup' },
+                { label: 'Decline', action: 'decline' }
+              ]
+            };
+            
+            set({ notifications: [...notifications, newNotification] });
+          }
+        }
+      },
+
+      checkTournamentEligibility: (playerMMR: number) => {
+        // Champion III threshold = 2350 MMR
+        return playerMMR >= 2350;
+      },
+
+      registerPlayerForTournament: (playerName: string, playerMMR: number) => {
+        if (!get().checkTournamentEligibility(playerMMR)) {
+          console.log('Player not eligible for RCCS tournament (need Champion III+)');
+          return;
+        }
+
+        // Generate AI teammates with MMR similar to player
+        const teammate1MMR = Math.max(1500, playerMMR + (Math.random() - 0.5) * 400);
+        const teammate2MMR = Math.max(1500, playerMMR + (Math.random() - 0.5) * 400);
+
+        const playerTeam: RCCSTeam = {
+          id: `team-${playerName}`,
+          playerName,
+          playerMMR,
+          teammate1: { name: generateAITeammateName(teammate1MMR), mmr: teammate1MMR },
+          teammate2: { name: generateAITeammateName(teammate2MMR), mmr: teammate2MMR },
+          averageMMR: Math.floor((playerMMR + teammate1MMR + teammate2MMR) / 3),
+          eliminated: false,
+        };
+
+        // Start qualifiers tournament
+        const qualifiersTournament: RCCSTournament = {
+          id: `rccs-s${get().currentSeason}-qualifiers`,
+          season: get().currentSeason,
+          stage: 'qualifiers',
+          teams: [playerTeam],
+          matches: [],
+          status: 'registration',
+          startDate: new Date(),
+          maxTeams: 160, // 128 AI + player + others
+          rewards: RCCS_REWARDS.qualifiers.map(r => ({
+            ...r,
+            title: r.title.replace('{season}', get().currentSeason.toString())
+          })),
+        };
+
+        // Generate 127 AI teams for qualifiers
+        const aiTeams = get().generateAITeams(127, playerTeam.averageMMR);
+        qualifiersTournament.teams.push(...aiTeams);
+
+        set({
+          currentTournament: qualifiersTournament,
+          playerRegistered: true,
+          playerTeam,
+        });
+
+        // Dismiss signup notification
+        get().dismissNotification(`tournament-signup-s${get().currentSeason}`);
+      },
+
+      declineTournamentSignup: () => {
+        get().dismissNotification(`tournament-signup-s${get().currentSeason}`);
+      },
+
+      generateAITeams: (count: number, playerAvgMMR: number) => {
+        const aiTeams: RCCSTeam[] = [];
+        
+        for (let i = 0; i < count; i++) {
+          // Generate MMR around player's level with some variation
+          const baseMMR = Math.max(1500, playerAvgMMR + (Math.random() - 0.5) * 800);
+          const variation = 300;
+          
+          const player1MMR = Math.max(1500, baseMMR + (Math.random() - 0.5) * variation);
+          const player2MMR = Math.max(1500, baseMMR + (Math.random() - 0.5) * variation);
+          const player3MMR = Math.max(1500, baseMMR + (Math.random() - 0.5) * variation);
+          
+          const team: RCCSTeam = {
+            id: `ai-team-${i + 1}`,
+            playerName: generateAITeammateName(player1MMR),
+            playerMMR: player1MMR,
+            teammate1: { name: generateAITeammateName(player2MMR), mmr: player2MMR },
+            teammate2: { name: generateAITeammateName(player3MMR), mmr: player3MMR },
+            averageMMR: Math.floor((player1MMR + player2MMR + player3MMR) / 3),
+            eliminated: false,
+          };
+          
+          aiTeams.push(team);
+        }
+        
+        // Sort teams by average MMR (higher MMR teams are "stronger")
+        return aiTeams.sort((a, b) => b.averageMMR - a.averageMMR);
+      },
+
+      simulateMatch: (team1: RCCSTeam, team2: RCCSTeam) => {
+        const winProbability = calculateTeamWinProbability(team1.averageMMR, team2.averageMMR);
+        
+        // Best of 5 match simulation
+        let team1Score = 0;
+        let team2Score = 0;
+        
+        while (team1Score < 3 && team2Score < 3) {
+          if (Math.random() < winProbability) {
+            team1Score++;
+          } else {
+            team2Score++;
+          }
+        }
+        
+        const winner = team1Score > team2Score ? team1 : team2;
+        
+        const match: RCCSMatch = {
+          id: `match-${team1.id}-${team2.id}`,
+          team1,
+          team2,
+          winner,
+          round: 'simulated',
+          bestOf: 5,
+          team1Score,
+          team2Score,
+          status: 'completed',
+        };
+        
+        return match;
+      },
+
+      advanceTournament: () => {
+        const { currentTournament } = get();
+        if (!currentTournament || currentTournament.status === 'completed') return;
+
+        const tournament = { ...currentTournament };
+        
+        if (tournament.stage === 'qualifiers') {
+          // Simulate qualifiers - top 32 teams advance
+          const sortedTeams = [...tournament.teams].sort((a, b) => {
+            // Higher MMR teams have better chances
+            return b.averageMMR - a.averageMMR + (Math.random() - 0.5) * 200;
+          });
+          
+          // Set placements
+          sortedTeams.forEach((team, index) => {
+            team.placement = index + 1;
+            team.eliminated = index >= 32;
+          });
+          
+          // Award qualifiers rewards
+          get().calculateRewards(tournament);
+          
+          // Advance to regionals if player qualified
+          const playerTeam = sortedTeams.find(t => t.id === get().playerTeam?.id);
+          if (playerTeam && !playerTeam.eliminated) {
+            // Create first regional tournament
+            const regionalTournament: RCCSTournament = {
+              id: `rccs-s${tournament.season}-regionals-1`,
+              season: tournament.season,
+              stage: 'regionals',
+              stageNumber: 1,
+              teams: sortedTeams.slice(0, 32), // Top 32 teams
+              matches: [],
+              status: 'active',
+              startDate: new Date(),
+              maxTeams: 32,
+              rewards: RCCS_REWARDS.regionals.map(r => ({
+                ...r,
+                title: r.title.replace('{season}', tournament.season.toString())
+              })),
+            };
+            
+            set({ currentTournament: regionalTournament });
+          } else {
+            // Player eliminated, tournament over for them
+            set({ 
+              currentTournament: null,
+              playerRegistered: false,
+            });
+          }
+        } else if (tournament.stage === 'regionals') {
+          // Simulate regional tournament - top 6 advance to majors
+          const sortedTeams = [...tournament.teams].sort((a, b) => {
+            return b.averageMMR - a.averageMMR + (Math.random() - 0.5) * 300;
+          });
+          
+          sortedTeams.forEach((team, index) => {
+            team.placement = index + 1;
+            team.eliminated = index >= 6;
+          });
+          
+          get().calculateRewards(tournament);
+          
+          // Check if player advances to majors
+          const playerTeam = sortedTeams.find(t => t.id === get().playerTeam?.id);
+          if (playerTeam && !playerTeam.eliminated) {
+            // Create major tournament (simplified - combining both majors)
+            const majorTournament: RCCSTournament = {
+              id: `rccs-s${tournament.season}-majors`,
+              season: tournament.season,
+              stage: 'majors',
+              teams: sortedTeams.slice(0, 12), // Top 6 from each of 2 regionals
+              matches: [],
+              status: 'active',
+              startDate: new Date(),
+              maxTeams: 12,
+              rewards: RCCS_REWARDS.majors.map(r => ({
+                ...r,
+                title: r.title.replace('{season}', tournament.season.toString())
+              })),
+            };
+            
+            set({ currentTournament: majorTournament });
+          } else {
+            set({ 
+              currentTournament: null,
+              playerRegistered: false,
+            });
+          }
+        } else if (tournament.stage === 'majors') {
+          // Simulate major tournament - top 6 advance to worlds
+          const sortedTeams = [...tournament.teams].sort((a, b) => {
+            return b.averageMMR - a.averageMMR + (Math.random() - 0.5) * 400;
+          });
+          
+          sortedTeams.forEach((team, index) => {
+            team.placement = index + 1;
+            team.eliminated = index >= 6;
+          });
+          
+          get().calculateRewards(tournament);
+          
+          const playerTeam = sortedTeams.find(t => t.id === get().playerTeam?.id);
+          if (playerTeam && !playerTeam.eliminated) {
+            // Create worlds tournament
+            const worldsTournament: RCCSTournament = {
+              id: `rccs-s${tournament.season}-worlds`,
+              season: tournament.season,
+              stage: 'worlds',
+              teams: sortedTeams.slice(0, 12), // Top 6 from each major
+              matches: [],
+              status: 'active',
+              startDate: new Date(),
+              maxTeams: 12,
+              rewards: RCCS_REWARDS.worlds.map(r => ({
+                ...r,
+                title: r.title.replace('{season}', tournament.season.toString())
+              })),
+            };
+            
+            set({ currentTournament: worldsTournament });
+          } else {
+            set({ 
+              currentTournament: null,
+              playerRegistered: false,
+            });
+          }
+        } else if (tournament.stage === 'worlds') {
+          // Final tournament simulation
+          const sortedTeams = [...tournament.teams].sort((a, b) => {
+            return b.averageMMR - a.averageMMR + (Math.random() - 0.5) * 500;
+          });
+          
+          sortedTeams.forEach((team, index) => {
+            team.placement = index + 1;
+          });
+          
+          get().calculateRewards(tournament);
+          
+          // Tournament complete
+          set({ 
+            currentTournament: { ...tournament, status: 'completed', endDate: new Date() },
+            playerRegistered: false,
+            tournamentHistory: [...get().tournamentHistory, tournament],
+          });
+        }
+      },
+
+      calculateRewards: (tournament: RCCSTournament) => {
+        // Award titles to players based on their placement
+        tournament.teams.forEach(team => {
+          if (team.placement) {
+            for (const reward of tournament.rewards) {
+              if (team.placement >= reward.minPlacement && team.placement <= reward.maxPlacement) {
+                // In a real implementation, this would save to database and add to player titles
+                console.log(`Team ${team.playerName} earned: ${reward.title} (Placement: ${team.placement})`);
+                break;
+              }
+            }
+          }
+        });
+      },
+
+      dismissNotification: (notificationId: string) => {
+        set(state => ({
+          notifications: state.notifications.map(n => 
+            n.id === notificationId ? { ...n, dismissed: true } : n
+          ),
+        }));
+      },
+
+      startNewSeason: () => {
+        set(state => ({
+          currentSeason: state.currentSeason + 1,
+          currentTournament: null,
+          playerRegistered: false,
+          playerTeam: null,
+          notifications: [],
+          seasonEndDate: new Date(Date.now() + 28 * 24 * 60 * 60 * 1000),
+        }));
+        
+        // Initialize new season's tournament system
+        setTimeout(() => get().initializeTournamentSystem(), 100);
+      },
+
+      forceStartTournament: (stage: 'qualifiers' | 'regionals' | 'majors' | 'worlds') => {
+        // Debug function to force start any tournament stage
+        console.log(`Force starting RCCS tournament: ${stage}`);
+        
+        // Reset notifications to show signup
+        const signupNotification: RCCSNotification = {
+          id: `tournament-signup-s${get().currentSeason}`,
+          type: 'tournament-signup',
+          season: get().currentSeason,
+          message: `RCCS Season ${get().currentSeason} Tournament is starting! Sign up now (Champion III+ only)`,
+          persistent: true,
+          dismissed: false,
+          actions: [
+            { label: 'Sign Up', action: 'signup' },
+            { label: 'Decline', action: 'decline' }
+          ]
+        };
+        
+        set({ notifications: [signupNotification] });
+      },
+    }),
+    {
+      name: 'rccs-tournament-store',
+      partialize: (state) => ({
+        currentSeason: state.currentSeason,
+        tournamentHistory: state.tournamentHistory,
+        notifications: state.notifications.filter(n => n.persistent),
+        seasonEndDate: state.seasonEndDate,
+      }),
+    }
+  )
+);

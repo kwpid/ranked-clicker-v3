@@ -217,6 +217,33 @@ export function TournamentScreen() {
         </CardContent>
       </Card>
 
+      {/* RCCS Championship Series */}
+      <Card className="bg-gradient-to-r from-cyan-900/30 to-purple-900/30 border-cyan-500/50 mb-6">
+        <CardHeader>
+          <CardTitle className="text-cyan-400 flex items-center gap-2 text-xl">
+            <Trophy className="h-6 w-6" />
+            🏆 RCCS - Ranked Clicker Championship Series
+          </CardTitle>
+          <p className="text-gray-300">
+            The ultimate competitive tournament series. Qualify through multiple stages to become the World Champion.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-300">
+              <div>Format: 3v3 Teams • Stages: Qualifiers → Regionals → Majors → Worlds</div>
+              <div>Eligibility: Champion III+ Required • Seasonal Championship</div>
+            </div>
+            <Button 
+              onClick={() => setCurrentScreen('rccs')}
+              className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold"
+            >
+              View RCCS
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Tournament Modes */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {tournamentModes.map((mode) => {
