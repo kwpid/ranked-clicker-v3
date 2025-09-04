@@ -303,6 +303,12 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
 
         const tournament = { ...currentTournament };
         
+        // If tournament is in registration, move it to active for simulation
+        if (tournament.status === 'registration') {
+          tournament.status = 'active';
+          console.log(`🏆 Starting ${tournament.stage} simulation with ${tournament.teams.length} teams`);
+        }
+        
         if (tournament.stage === 'qualifiers') {
           // Simulate qualifiers - top 32 teams advance
           const sortedTeams = [...tournament.teams].sort((a, b) => {
@@ -316,8 +322,16 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
             team.eliminated = index >= 32;
           });
           
+          // Update the tournament state with results first
+          const updatedTournament = { ...tournament, teams: sortedTeams, status: 'completed' as const };
+          set({ currentTournament: updatedTournament });
+          
           // Award qualifiers rewards
-          get().calculateRewards(tournament);
+          get().calculateRewards(updatedTournament);
+          
+          // Log results
+          console.log(`🎯 Qualifiers Results: Player placed #${sortedTeams.find(t => t.id === get().playerTeam?.id)?.placement || 'Unknown'}`);
+          console.log(`✅ Top 32 teams advance to Regionals`);
           
           // Advance to regionals if player qualified
           const playerTeam = sortedTeams.find(t => t.id === get().playerTeam?.id);
@@ -339,13 +353,20 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
               })),
             };
             
-            set({ currentTournament: regionalTournament });
+            // Wait a moment to show results, then advance
+            setTimeout(() => {
+              set({ currentTournament: regionalTournament });
+              console.log(`🚀 Advanced to Regionals with ${regionalTournament.teams.length} teams`);
+            }, 2000);
           } else {
             // Player eliminated, tournament over for them
-            set({ 
-              currentTournament: null,
-              playerRegistered: false,
-            });
+            console.log(`❌ Player eliminated at position #${playerTeam?.placement}. Tournament over.`);
+            setTimeout(() => {
+              set({ 
+                currentTournament: updatedTournament, // Keep showing final results
+                playerRegistered: false,
+              });
+            }, 3000);
           }
         } else if (tournament.stage === 'regionals') {
           // Simulate regional tournament - top 6 advance to majors
