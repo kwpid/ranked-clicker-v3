@@ -246,31 +246,31 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
         const aiTeams: RCCSTeam[] = [];
         
         // Create a realistic MMR distribution for tournament teams
-        // Top tier: 3700-3800 (5% of teams, typically make worlds)
-        // High tier: 3400-3699 (15% of teams)
-        // Mid-high tier: 3100-3399 (25% of teams)
-        // Mid tier: 2900-3099 (30% of teams)
-        // Lower tier: 2700-2899 (25% of teams)
+        // Top tier: 2900-3000 (5% of teams, typically make worlds)
+        // High tier: 2800-2899 (15% of teams)
+        // Mid-high tier: 2700-2799 (25% of teams)
+        // Mid tier: 2600-2699 (30% of teams)
+        // Lower tier: 2400-2599 (25% of teams)
         
         for (let i = 0; i < count; i++) {
           let targetAvgMMR: number;
           const rand = Math.random();
           
           if (rand < 0.05) {
-            // Top 5% - Elite teams (3700-3800)
-            targetAvgMMR = 3700 + Math.random() * 100;
+            // Top 5% - Elite teams (2900-3000)
+            targetAvgMMR = 2900 + Math.random() * 100;
           } else if (rand < 0.20) {
-            // Next 15% - High tier (3400-3699)
-            targetAvgMMR = 3400 + Math.random() * 299;
+            // Next 15% - High tier (2800-2899)
+            targetAvgMMR = 2800 + Math.random() * 99;
           } else if (rand < 0.45) {
-            // Next 25% - Mid-high tier (3100-3399)
-            targetAvgMMR = 3100 + Math.random() * 299;
+            // Next 25% - Mid-high tier (2700-2799)
+            targetAvgMMR = 2700 + Math.random() * 99;
           } else if (rand < 0.75) {
-            // Next 30% - Mid tier (2900-3099)
-            targetAvgMMR = 2900 + Math.random() * 199;
+            // Next 30% - Mid tier (2600-2699)
+            targetAvgMMR = 2600 + Math.random() * 99;
           } else {
-            // Bottom 25% - Lower tier (2700-2899)
-            targetAvgMMR = 2700 + Math.random() * 199;
+            // Bottom 25% - Lower tier (2400-2599)
+            targetAvgMMR = 2400 + Math.random() * 199;
           }
           
           // Generate individual player MMRs around the target average

@@ -109,16 +109,16 @@ function getRandomAITitle(aiMMR: number, currentSeason: number = 1): string {
   const RCCS_TITLES: string[] = [];
   if (aiRankIndex >= 6) { // Grand Champion or higher
     for (let season = 1; season <= currentSeason; season++) {
-      if (aiMMR >= 3500) {
-        // Elite MMR - World Champion level titles
+      if (aiMMR >= 2950) {
+        // Elite MMR - World Champion level titles (3k max)
         RCCS_TITLES.push(`RCCS S${season} WORLD CHAMPION`);
         RCCS_TITLES.push(`RCCS S${season} WORLDS FINALIST`);
-      } else if (aiMMR >= 3200) {
+      } else if (aiMMR >= 2850) {
         // High MMR - Major Champion level titles
         RCCS_TITLES.push(`RCCS S${season} MAJOR CHAMPION`);
         RCCS_TITLES.push(`RCCS S${season} WORLD CHALLENGER`);
         RCCS_TITLES.push(`RCCS S${season} MAJOR CONTENDER`);
-      } else if (aiMMR >= 2900) {
+      } else if (aiMMR >= 2700) {
         // Good MMR - Regional Champion level titles
         RCCS_TITLES.push(`RCCS S${season} REGIONAL CHAMPION`);
         RCCS_TITLES.push(`RCCS S${season} REGIONAL ELITE`);
@@ -235,14 +235,14 @@ export function simulateAIClicks(aiMMR: number, playerCPS: number): number {
       baseCPS = 8 + Math.random() * 2;
     }
   } else {
-    // Grand Champion - Adapts to player CPS ±2 but with higher minimum
+    // Grand Champion - Adapts to player CPS ±2 but with 8-17 CPS range
     if (playerCPS > 0) {
       const adaptiveMin = Math.max(8, playerCPS - 2); // Minimum 8 CPS, player CPS - 2
-      const adaptiveMax = Math.max(12, playerCPS + 2); // Minimum 12 CPS max, player CPS + 2
+      const adaptiveMax = Math.min(17, Math.max(12, playerCPS + 2)); // Maximum 17 CPS, minimum 12 CPS max
       baseCPS = adaptiveMin + Math.random() * (adaptiveMax - adaptiveMin);
     } else {
       // Fallback if no player CPS data
-      baseCPS = 10 + Math.random() * 4; // 10-14 CPS range
+      baseCPS = 8 + Math.random() * 9; // 8-17 CPS range
     }
   }
   
