@@ -343,19 +343,19 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
         if (tournament.stage === 'qualifiers') {
           // Simulate qualifiers - top 32 teams advance
           const sortedTeams = [...tournament.teams].sort((a, b) => {
-            // Pro-level simulation: 3K+ MMR teams have significant advantages
             const mmrDiff = b.averageMMR - a.averageMMR;
             
-            // Pro level bonus (2.8K+ MMR gets major advantage)
-            const bProBonus = b.averageMMR >= 2800 ? 200 : 0;
-            const aProBonus = a.averageMMR >= 2800 ? 200 : 0;
-            const proAdvantage = bProBonus - aProBonus;
+            // MMR-based advancement bonuses to ensure proper tier progression
+            // Mid-high tier (2700+) should reliably make regionals
+            const bRegionalBonus = b.averageMMR >= 2700 ? 300 : 0;
+            const aRegionalBonus = a.averageMMR >= 2700 ? 300 : 0;
+            const regionalAdvantage = bRegionalBonus - aRegionalBonus;
             
             // Reduced randomness, skill matters more
-            const randomFactor = (Math.random() - 0.5) * 150; // Reduced from 400
-            const skillBonus = mmrDiff * 1.2; // Increased skill importance
+            const randomFactor = (Math.random() - 0.5) * 100;
+            const skillBonus = mmrDiff * 1.4;
             
-            return skillBonus + proAdvantage + randomFactor;
+            return skillBonus + regionalAdvantage + randomFactor;
           });
           
           // Set placements
@@ -415,16 +415,16 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
           const sortedTeams = [...tournament.teams].sort((a, b) => {
             const mmrDiff = b.averageMMR - a.averageMMR;
             
-            // Pro level bonus - even more important at regionals
-            const bProBonus = b.averageMMR >= 2800 ? 300 : 0;
-            const aProBonus = a.averageMMR >= 2800 ? 300 : 0;
-            const proAdvantage = bProBonus - aProBonus;
+            // High tier (2800+) should reliably make majors
+            const bMajorBonus = b.averageMMR >= 2800 ? 400 : 0;
+            const aMajorBonus = a.averageMMR >= 2800 ? 400 : 0;
+            const majorAdvantage = bMajorBonus - aMajorBonus;
             
             // Less randomness as competition gets harder
-            const randomFactor = (Math.random() - 0.5) * 120; // Reduced from 350
-            const skillBonus = mmrDiff * 1.4; // Higher skill importance
+            const randomFactor = (Math.random() - 0.5) * 80;
+            const skillBonus = mmrDiff * 1.6;
             
-            return skillBonus + proAdvantage + randomFactor;
+            return skillBonus + majorAdvantage + randomFactor;
           });
           
           sortedTeams.forEach((team, index) => {
@@ -465,16 +465,16 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
           const sortedTeams = [...tournament.teams].sort((a, b) => {
             const mmrDiff = b.averageMMR - a.averageMMR;
             
-            // Pro level dominance at majors - 2.8K+ teams heavily favored
-            const bProBonus = b.averageMMR >= 2800 ? 400 : 0;
-            const aProBonus = a.averageMMR >= 2800 ? 400 : 0;
-            const proAdvantage = bProBonus - aProBonus;
+            // Elite teams (2900+) should almost always make worlds, high tier (2800+) can make it too
+            const bEliteBonus = b.averageMMR >= 2900 ? 600 : (b.averageMMR >= 2800 ? 300 : 0);
+            const aEliteBonus = a.averageMMR >= 2900 ? 600 : (a.averageMMR >= 2800 ? 300 : 0);
+            const eliteAdvantage = bEliteBonus - aEliteBonus;
             
             // Minimal randomness at major level
-            const randomFactor = (Math.random() - 0.5) * 100; // Reduced from 300
-            const skillBonus = mmrDiff * 1.6; // High skill importance
+            const randomFactor = (Math.random() - 0.5) * 60;
+            const skillBonus = mmrDiff * 1.8;
             
-            return skillBonus + proAdvantage + randomFactor;
+            return skillBonus + eliteAdvantage + randomFactor;
           });
           
           sortedTeams.forEach((team, index) => {
@@ -514,16 +514,16 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
           const sortedTeams = [...tournament.teams].sort((a, b) => {
             const mmrDiff = b.averageMMR - a.averageMMR;
             
-            // At worlds, only the elite survive - massive pro bonus
-            const bProBonus = b.averageMMR >= 2800 ? 500 : 0;
-            const aProBonus = a.averageMMR >= 2800 ? 500 : 0;
-            const proAdvantage = bProBonus - aProBonus;
+            // At worlds, elite teams (2900+) dominate but high tier (2800+) can compete
+            const bWorldsBonus = b.averageMMR >= 2900 ? 800 : (b.averageMMR >= 2800 ? 400 : 0);
+            const aWorldsBonus = a.averageMMR >= 2900 ? 800 : (a.averageMMR >= 2800 ? 400 : 0);
+            const worldsAdvantage = bWorldsBonus - aWorldsBonus;
             
             // Very little randomness at the highest level
-            const randomFactor = (Math.random() - 0.5) * 80; // Reduced from 250
-            const skillBonus = mmrDiff * 2.0; // Maximum skill importance
+            const randomFactor = (Math.random() - 0.5) * 40;
+            const skillBonus = mmrDiff * 2.2;
             
-            return skillBonus + proAdvantage + randomFactor;
+            return skillBonus + worldsAdvantage + randomFactor;
           });
           
           sortedTeams.forEach((team, index) => {
