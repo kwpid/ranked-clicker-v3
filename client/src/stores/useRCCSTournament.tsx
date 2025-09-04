@@ -70,6 +70,19 @@ interface RCCSTournamentStore {
   tournamentHistory: RCCSTournament[];
   notifications: RCCSNotification[];
   
+  // Player qualification tracking and locking system
+  playerQualifications: {
+    regional: boolean;    // Qualified for any regional
+    major: boolean;       // Qualified for any major  
+    worlds: boolean;      // Qualified for worlds
+    regionalNumber?: number; // Which regional qualified for (1-4)
+    majorNumber?: number;    // Which major qualified for (1-2)
+  };
+  
+  // Available tournaments this season
+  availableRegionals: number[];  // [1, 2, 3, 4] - which regionals are still open
+  availableMajors: number[];     // [1, 2] - which majors are still open
+  
   // Season management
   currentSeason: number;
   seasonEndDate: Date | null;
@@ -115,16 +128,17 @@ const RCCS_REWARDS: Record<string, RCCSTournamentReward[]> = {
   ],
 };
 
-// Generate AI teammate names
+// Import AI names from the regular ranked system
+import { generateAIOpponents } from '../utils/aiOpponents';
+
+// Generate AI teammate names using regular ranked AI names
 const generateAITeammateName = (mmr: number): string => {
-  const prefixes = ['Pro', 'Elite', 'Master', 'Ace', 'Turbo', 'Speed', 'Click', 'Storm', 'Blitz', 'Flash'];
-  const suffixes = ['Clicker', 'Master', 'Pro', 'Legend', 'Storm', 'Strike', 'Rush', 'Force', 'Ace', 'King'];
+  // Use the same AI names as regular ranked games
+  const AI_NAMES = [
+    "L", "kupid", "l0st", "jayleng", "weweewew", "RisingPhoinex87", "dr.1", "prot", "hunt", "kif", "?", "rivverott", "1x Dark", "Moxxy!", "ä", "شغثغخ", "dark!", "Vortex", "FlickMaster17", "r", "Skywave!", "R3tr0", "TurboClash893", "Zynk", "Null_Force", "Orbital", "Boosted", "GravyTrain", "NitroNinja", "PixelPlay", "PhantomX", "Fury", "Zero!", "Moonlight", "QuickTap", "v1per", "Slugger", "MetaDrift", "Hydra", "Neo!", "ShadowDart", "SlipStream", "F1ick", "Karma", "Sparkz", "Glitch", "Dash7", "Ignite", "Cyclone", "Nova", "Opt1c", "Viral", "Stormz", "PyroBlast", "Bl1tz", "Echo", "Hover", "PulseRider", "yumi", "drali", "wez", "brickbybrick", "Rw9", "dark", "mawykzy!", "Speed", ".", "koto", "dani", "Qwert (OG)", "dr.k", "Void", "moon.", "Lru", "Kha0s", "rising.", "?", "dynamo", "f", "Hawk!", "newpo", "zen", "v", "a7md", "sieko", "Mino", "dyinq", "toxin", "Bez", "velocity", "Chronic", "Flinch", "vatsi", "Xyzle", "ca$h", "Darkmode", "nu3.", "LetsG0Brand0n", "VAWQK.", "helu30", "wizz", "Sczribbles.", "7up", "unkown", "t0es", "Jynx.", "Zapz", "Aur0", "Knight", "Cliqz", "Pyro.", "dash!", "ven", "flow.", "zenith", "volty", "Aqua!", "Styx", "cheeseboi", "Heat.", "Slyde", "fl1p", "Otto", "jetz", "Crisp", "snailracer", "Flickz", "tempo", "Blaze.", "skyfall", "steam", "storm", "rek:3", "vyna1", "deltairlines", "ph", "trace", "avidic", "tekk!", "fluwo", "climp?", "zark", "diza", "O", "Snooze", "gode", "cola", "hush(!)", "sh4oud", "vvv", "critt", "darkandlost2009", "pulse jubbo", "pl havicic", "ryft.", "Lyric", "dryft.", "horiz", "zeno", "octane", "wavetidess", "loster", "mamba", "Jack", "innadeze", "s", "offtenlost", "bivo", "Trace", "Talon", ".", "{?}", "rraze", "Dark{?}", "zenhj", "rinshoros bf", "Cipher", "nova", "juzz", "officer", "strike", "Titan", "comp", "pahnton", "Mirage", "space", "boltt", "reeper", "piza", "cheese.", "frostbite", "warthunderisbest", "eecipe", "quantum", "vexz", "zylo", "frzno", "blurr", "scythe!", "wvr", "nxt", "griz", "jolt", "sift", "kryo", "wvn", "brixx"
+  ];
   
-  const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-  const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
-  const number = Math.floor(Math.random() * 999) + 1;
-  
-  return `${prefix}${suffix}${number}`;
+  return AI_NAMES[Math.floor(Math.random() * AI_NAMES.length)];
 };
 
 // Calculate team success probability based on MMR
@@ -142,6 +156,18 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
       playerTeam: null,
       tournamentHistory: [],
       notifications: [],
+      
+      // Player qualification tracking and locking system
+      playerQualifications: {
+        regional: false,
+        major: false,
+        worlds: false,
+      },
+      
+      // Available tournaments this season
+      availableRegionals: [1, 2, 3, 4],  // All 4 regionals available initially
+      availableMajors: [1, 2],           // Both majors available initially
+      
       currentSeason: 1,
       seasonEndDate: null,
       tournamentStartDate: null,
@@ -346,9 +372,9 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
             const mmrDiff = b.averageMMR - a.averageMMR;
             
             // MMR-based advancement bonuses to ensure proper tier progression
-            // Mid-high tier (2700+) should reliably make regionals
-            const bRegionalBonus = b.averageMMR >= 2700 ? 300 : 0;
-            const aRegionalBonus = a.averageMMR >= 2700 ? 300 : 0;
+            // Mid-high tier (2700+) should reliably make regionals, high tier (2800+) almost guaranteed
+            const bRegionalBonus = b.averageMMR >= 2800 ? 1000 : (b.averageMMR >= 2700 ? 500 : 0);
+            const aRegionalBonus = a.averageMMR >= 2800 ? 1000 : (a.averageMMR >= 2700 ? 500 : 0);
             const regionalAdvantage = bRegionalBonus - aRegionalBonus;
             
             // Reduced randomness, skill matters more
