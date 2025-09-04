@@ -343,11 +343,19 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
         if (tournament.stage === 'qualifiers') {
           // Simulate qualifiers - top 32 teams advance
           const sortedTeams = [...tournament.teams].sort((a, b) => {
-            // Higher MMR teams have better chances, but with more randomness for upsets
+            // Pro-level simulation: 3K+ MMR teams have significant advantages
             const mmrDiff = b.averageMMR - a.averageMMR;
-            const randomFactor = (Math.random() - 0.5) * 400; // Increased randomness for upsets
-            const skillBonus = mmrDiff * 0.7; // Reduced skill advantage
-            return skillBonus + randomFactor;
+            
+            // Pro level bonus (3K+ MMR gets major advantage)
+            const bProBonus = b.averageMMR >= 3000 ? 200 : 0;
+            const aProBonus = a.averageMMR >= 3000 ? 200 : 0;
+            const proAdvantage = bProBonus - aProBonus;
+            
+            // Reduced randomness, skill matters more
+            const randomFactor = (Math.random() - 0.5) * 150; // Reduced from 400
+            const skillBonus = mmrDiff * 1.2; // Increased skill importance
+            
+            return skillBonus + proAdvantage + randomFactor;
           });
           
           // Set placements
@@ -406,9 +414,17 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
           // Simulate regional tournament - top 6 advance to majors
           const sortedTeams = [...tournament.teams].sort((a, b) => {
             const mmrDiff = b.averageMMR - a.averageMMR;
-            const randomFactor = (Math.random() - 0.5) * 350;
-            const skillBonus = mmrDiff * 0.8;
-            return skillBonus + randomFactor;
+            
+            // Pro level bonus - even more important at regionals
+            const bProBonus = b.averageMMR >= 3000 ? 300 : 0;
+            const aProBonus = a.averageMMR >= 3000 ? 300 : 0;
+            const proAdvantage = bProBonus - aProBonus;
+            
+            // Less randomness as competition gets harder
+            const randomFactor = (Math.random() - 0.5) * 120; // Reduced from 350
+            const skillBonus = mmrDiff * 1.4; // Higher skill importance
+            
+            return skillBonus + proAdvantage + randomFactor;
           });
           
           sortedTeams.forEach((team, index) => {
@@ -448,9 +464,17 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
           // Simulate major tournament - top 6 advance to worlds
           const sortedTeams = [...tournament.teams].sort((a, b) => {
             const mmrDiff = b.averageMMR - a.averageMMR;
-            const randomFactor = (Math.random() - 0.5) * 300;
-            const skillBonus = mmrDiff * 0.9; // Slightly higher skill factor for majors
-            return skillBonus + randomFactor;
+            
+            // Pro level dominance at majors - 3K+ teams heavily favored
+            const bProBonus = b.averageMMR >= 3000 ? 400 : 0;
+            const aProBonus = a.averageMMR >= 3000 ? 400 : 0;
+            const proAdvantage = bProBonus - aProBonus;
+            
+            // Minimal randomness at major level
+            const randomFactor = (Math.random() - 0.5) * 100; // Reduced from 300
+            const skillBonus = mmrDiff * 1.6; // High skill importance
+            
+            return skillBonus + proAdvantage + randomFactor;
           });
           
           sortedTeams.forEach((team, index) => {
@@ -486,12 +510,20 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
             });
           }
         } else if (tournament.stage === 'worlds') {
-          // Final tournament simulation
+          // Final tournament simulation - Worlds
           const sortedTeams = [...tournament.teams].sort((a, b) => {
             const mmrDiff = b.averageMMR - a.averageMMR;
-            const randomFactor = (Math.random() - 0.5) * 250; // Less randomness at worlds
-            const skillBonus = mmrDiff * 1.0; // Full skill factor for worlds
-            return skillBonus + randomFactor;
+            
+            // At worlds, only the elite survive - massive pro bonus
+            const bProBonus = b.averageMMR >= 3000 ? 500 : 0;
+            const aProBonus = a.averageMMR >= 3000 ? 500 : 0;
+            const proAdvantage = bProBonus - aProBonus;
+            
+            // Very little randomness at the highest level
+            const randomFactor = (Math.random() - 0.5) * 80; // Reduced from 250
+            const skillBonus = mmrDiff * 2.0; // Maximum skill importance
+            
+            return skillBonus + proAdvantage + randomFactor;
           });
           
           sortedTeams.forEach((team, index) => {
@@ -666,9 +698,14 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
 
       forceStartTournament: (stage: 'qualifiers' | 'regionals' | 'majors' | 'worlds') => {
         // Debug function to force start any tournament stage
-        console.log(`Force starting RCCS tournament: ${stage}`);
+        // Increment season to ensure unique titles for each test run
+        const newSeason = get().currentSeason + 1;
+        console.log(`Force starting RCCS Season ${newSeason} tournament: ${stage}`);
         
-        // Reset notifications to show signup
+        // Start new season first to get fresh season number
+        get().startNewSeason();
+        
+        // Reset notifications to show signup with new season
         const signupNotification: RCCSNotification = {
           id: `tournament-signup-s${get().currentSeason}`,
           type: 'tournament-signup',
