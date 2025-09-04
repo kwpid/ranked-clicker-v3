@@ -188,9 +188,9 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
           return;
         }
 
-        // Generate AI teammates with MMR similar to player
-        const teammate1MMR = Math.max(1500, playerMMR + (Math.random() - 0.5) * 400);
-        const teammate2MMR = Math.max(1500, playerMMR + (Math.random() - 0.5) * 400);
+        // Generate AI teammates with MMR similar to player (more reasonable range)
+        const teammate1MMR = Math.max(2200, playerMMR + (Math.random() - 0.5) * 300);
+        const teammate2MMR = Math.max(2200, playerMMR + (Math.random() - 0.5) * 300);
 
         const playerTeam: RCCSTeam = {
           id: `team-${playerName}`,
@@ -239,14 +239,39 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
       generateAITeams: (count: number, playerAvgMMR: number) => {
         const aiTeams: RCCSTeam[] = [];
         
+        // Create a realistic MMR distribution for tournament teams
+        // Top tier: 3700-3800 (5% of teams, typically make worlds)
+        // High tier: 3400-3699 (15% of teams)
+        // Mid-high tier: 3100-3399 (25% of teams)
+        // Mid tier: 2900-3099 (30% of teams)
+        // Lower tier: 2700-2899 (25% of teams)
+        
         for (let i = 0; i < count; i++) {
-          // Generate MMR around player's level with some variation
-          const baseMMR = Math.max(1500, playerAvgMMR + (Math.random() - 0.5) * 800);
-          const variation = 300;
+          let targetAvgMMR: number;
+          const rand = Math.random();
           
-          const player1MMR = Math.max(1500, baseMMR + (Math.random() - 0.5) * variation);
-          const player2MMR = Math.max(1500, baseMMR + (Math.random() - 0.5) * variation);
-          const player3MMR = Math.max(1500, baseMMR + (Math.random() - 0.5) * variation);
+          if (rand < 0.05) {
+            // Top 5% - Elite teams (3700-3800)
+            targetAvgMMR = 3700 + Math.random() * 100;
+          } else if (rand < 0.20) {
+            // Next 15% - High tier (3400-3699)
+            targetAvgMMR = 3400 + Math.random() * 299;
+          } else if (rand < 0.45) {
+            // Next 25% - Mid-high tier (3100-3399)
+            targetAvgMMR = 3100 + Math.random() * 299;
+          } else if (rand < 0.75) {
+            // Next 30% - Mid tier (2900-3099)
+            targetAvgMMR = 2900 + Math.random() * 199;
+          } else {
+            // Bottom 25% - Lower tier (2700-2899)
+            targetAvgMMR = 2700 + Math.random() * 199;
+          }
+          
+          // Generate individual player MMRs around the target average
+          const variation = 150; // Reduced variation for more realistic teams
+          const player1MMR = Math.max(2400, targetAvgMMR + (Math.random() - 0.5) * variation);
+          const player2MMR = Math.max(2400, targetAvgMMR + (Math.random() - 0.5) * variation);
+          const player3MMR = Math.max(2400, targetAvgMMR + (Math.random() - 0.5) * variation);
           
           const team: RCCSTeam = {
             id: `ai-team-${i + 1}`,
@@ -312,8 +337,11 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
         if (tournament.stage === 'qualifiers') {
           // Simulate qualifiers - top 32 teams advance
           const sortedTeams = [...tournament.teams].sort((a, b) => {
-            // Higher MMR teams have better chances
-            return b.averageMMR - a.averageMMR + (Math.random() - 0.5) * 200;
+            // Higher MMR teams have better chances, but with more randomness for upsets
+            const mmrDiff = b.averageMMR - a.averageMMR;
+            const randomFactor = (Math.random() - 0.5) * 400; // Increased randomness for upsets
+            const skillBonus = mmrDiff * 0.7; // Reduced skill advantage
+            return skillBonus + randomFactor;
           });
           
           // Set placements
@@ -371,7 +399,10 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
         } else if (tournament.stage === 'regionals') {
           // Simulate regional tournament - top 6 advance to majors
           const sortedTeams = [...tournament.teams].sort((a, b) => {
-            return b.averageMMR - a.averageMMR + (Math.random() - 0.5) * 300;
+            const mmrDiff = b.averageMMR - a.averageMMR;
+            const randomFactor = (Math.random() - 0.5) * 350;
+            const skillBonus = mmrDiff * 0.8;
+            return skillBonus + randomFactor;
           });
           
           sortedTeams.forEach((team, index) => {
@@ -410,7 +441,10 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
         } else if (tournament.stage === 'majors') {
           // Simulate major tournament - top 6 advance to worlds
           const sortedTeams = [...tournament.teams].sort((a, b) => {
-            return b.averageMMR - a.averageMMR + (Math.random() - 0.5) * 400;
+            const mmrDiff = b.averageMMR - a.averageMMR;
+            const randomFactor = (Math.random() - 0.5) * 300;
+            const skillBonus = mmrDiff * 0.9; // Slightly higher skill factor for majors
+            return skillBonus + randomFactor;
           });
           
           sortedTeams.forEach((team, index) => {
@@ -448,7 +482,10 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
         } else if (tournament.stage === 'worlds') {
           // Final tournament simulation
           const sortedTeams = [...tournament.teams].sort((a, b) => {
-            return b.averageMMR - a.averageMMR + (Math.random() - 0.5) * 500;
+            const mmrDiff = b.averageMMR - a.averageMMR;
+            const randomFactor = (Math.random() - 0.5) * 250; // Less randomness at worlds
+            const skillBonus = mmrDiff * 1.0; // Full skill factor for worlds
+            return skillBonus + randomFactor;
           });
           
           sortedTeams.forEach((team, index) => {
