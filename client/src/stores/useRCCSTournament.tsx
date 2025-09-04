@@ -143,7 +143,6 @@ const RCCS_REWARDS: Record<string, RCCSTournamentReward[]> = {
     { placement: 12, title: 'RCCS S{season} MAJOR CONTENDER', color: '#00FFFF', hasGlow: true, minPlacement: 7, maxPlacement: 12 },
     { placement: 6, title: 'RCCS S{season} WORLD CHALLENGER', color: '#00FFFF', hasGlow: true, minPlacement: 2, maxPlacement: 6 },
     { placement: 1, title: 'RCCS S{season} MAJOR CHAMPION', color: '#00FFFF', hasGlow: true, minPlacement: 1, maxPlacement: 1 },
-    { placement: 1, title: 'RCCS S{season} {location} MAJOR CHAMPION', color: '#00FFFF', hasGlow: true, minPlacement: 1, maxPlacement: 1 }, // Location-specific title
   ],
   worlds: [
     { placement: 4, title: 'RCCS S{season} WORLDS FINALIST', color: '#00FFFF', hasGlow: true, minPlacement: 2, maxPlacement: 4 },
@@ -657,25 +656,8 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
             let highestTierReward: RCCSTournamentReward | null = null;
             for (const reward of tournament.rewards) {
               if (team.placement >= reward.minPlacement && team.placement <= reward.maxPlacement) {
-                // For major tournaments, prioritize location-specific titles over regular titles
-                if (tournament.stage === 'majors' && tournament.location && team.placement === 1) {
-                  // For major champions, only award location-specific title, skip regular major champion title
-                  if (reward.title.includes('{location}')) {
-                    highestTierReward = reward;
-                    break;
-                  }
-                  // Skip regular "MAJOR CHAMPION" title if location-specific one exists
-                  if (reward.title.includes('MAJOR CHAMPION') && !reward.title.includes('{location}')) {
-                    continue; // Skip this reward, look for location-specific one
-                  }
-                } else {
-                  // For non-champions or non-major tournaments, award normally but skip location-specific titles
-                  if (tournament.stage === 'majors' && reward.title.includes('{location}')) {
-                    continue; // Skip location-specific titles for non-champions
-                  }
-                  highestTierReward = reward;
-                  break;
-                }
+                highestTierReward = reward;
+                break;
               }
             }
             
@@ -689,11 +671,14 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
               
               // Award all earned titles
               earnedTitles.forEach(titleReward => {
-                // For major tournaments with location-specific titles, replace the location dynamically
                 let finalTitle = titleReward.title;
-                if (tournament.stage === 'majors' && tournament.location && finalTitle.includes('{location}')) {
-                  finalTitle = finalTitle.replace('{location}', tournament.location);
+                
+                // For major champions, create location-specific title
+                if (tournament.stage === 'majors' && tournament.location && 
+                    team.placement === 1 && finalTitle.includes('MAJOR CHAMPION')) {
+                  finalTitle = `RCCS S${tournament.season} ${tournament.location} MAJOR CHAMPION`;
                 }
+                
                 get().awardRCCSTitle(finalTitle, team.placement!, tournament.stage, titleReward.color);
                 console.log(`🏆 Player earned RCCS title: ${finalTitle} (Placement: ${team.placement})`);
               });
