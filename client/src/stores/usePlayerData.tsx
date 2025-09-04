@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getRankInfo } from '../utils/rankingSystem';
+import { useTournament, type TournamentTitle } from './useTournament';
 
 interface PlayerStats {
   wins: number;
@@ -19,7 +20,7 @@ interface Title {
   name: string;
   color: string;
   glow?: boolean;
-  type: 'level' | 'season';
+  type: 'level' | 'season' | 'tournament';
   requirement?: number;
 }
 
@@ -300,6 +301,10 @@ export const usePlayerData = create<PlayerDataStore>()(
       
       getAvailableTitles: () => {
         const { playerData } = get();
+        
+        // Get tournament titles from the tournament store
+        const tournamentStore = useTournament.getState();
+        
         return ALL_TITLES.filter(title => 
           playerData.unlockedTitles.includes(title.id)
         ).concat(
@@ -313,6 +318,17 @@ export const usePlayerData = create<PlayerDataStore>()(
               glow: reward.rank.includes('Grand Champion'),
               type: 'season' as const,
             }))
+        ).concat(
+          // Add tournament titles (including RCCS titles)
+          tournamentStore.tournamentTitles.map((tournamentTitle: TournamentTitle) => ({
+            id: tournamentTitle.id,
+            name: tournamentTitle.name,
+            color: tournamentTitle.color === 'golden' ? '#FFD700' : 
+                   tournamentTitle.color === 'green' ? '#10B981' :
+                   tournamentTitle.name.includes('RCCS S') ? '#00FFFF' : '#9CA3AF',
+            glow: tournamentTitle.color === 'golden' || tournamentTitle.name.includes('RCCS S'),
+            type: 'tournament' as const,
+          }))
         );
       },
       
