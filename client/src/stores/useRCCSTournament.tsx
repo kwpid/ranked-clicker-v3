@@ -22,6 +22,7 @@ interface RCCSTournament {
   season: number;
   stage: 'qualifiers' | 'regionals' | 'majors' | 'worlds';
   stageNumber?: number; // For multiple regionals/majors
+  location?: string; // Major tournament location (e.g., "STOCKHOLM")
   teams: RCCSTeam[];
   matches: RCCSMatch[];
   status: 'upcoming' | 'registration' | 'active' | 'completed';
@@ -79,6 +80,17 @@ interface RCCSTournamentStore {
     majorNumber?: number;    // Which major qualified for (1-2)
   };
   
+  // Elite performance tracking
+  playerEliteTracking: {
+    regionalTop3Count: number;    // Number of regionals with top 3 finish
+    majorTop3Count: number;       // Number of majors with top 3 finish  
+    worldsTop3Count: number;      // Number of worlds with top 3 finish
+    hasEliteTitle: boolean;       // Already awarded elite title this season
+  };
+  
+  // Season tournament locations (assigned at start of season)
+  seasonMajorLocations: string[];  // Two randomly selected locations for this season's majors
+  
   // Available tournaments this season
   availableRegionals: number[];  // [1, 2, 3, 4] - which regionals are still open
   availableMajors: number[];     // [1, 2] - which majors are still open
@@ -106,6 +118,16 @@ interface RCCSTournamentStore {
   forceStartTournament: (stage: 'qualifiers' | 'regionals' | 'majors' | 'worlds') => void;
 }
 
+// Major tournament host cities
+const MAJOR_LOCATIONS = [
+  'COPENHAGEN',
+  'LONDON', 
+  'BOSTON',
+  'STOCKHOLM',
+  'LOS ANGELES',
+  'ROTTERDAM'
+];
+
 // Tournament reward definitions
 const RCCS_REWARDS: Record<string, RCCSTournamentReward[]> = {
   qualifiers: [
@@ -121,10 +143,14 @@ const RCCS_REWARDS: Record<string, RCCSTournamentReward[]> = {
     { placement: 12, title: 'RCCS S{season} MAJOR CONTENDER', color: '#00FFFF', hasGlow: true, minPlacement: 7, maxPlacement: 12 },
     { placement: 6, title: 'RCCS S{season} WORLD CHALLENGER', color: '#00FFFF', hasGlow: true, minPlacement: 2, maxPlacement: 6 },
     { placement: 1, title: 'RCCS S{season} MAJOR CHAMPION', color: '#00FFFF', hasGlow: true, minPlacement: 1, maxPlacement: 1 },
+    { placement: 1, title: 'RCCS S{season} {location} MAJOR CHAMPION', color: '#00FFFF', hasGlow: true, minPlacement: 1, maxPlacement: 1 }, // Location-specific title
   ],
   worlds: [
     { placement: 4, title: 'RCCS S{season} WORLDS FINALIST', color: '#00FFFF', hasGlow: true, minPlacement: 2, maxPlacement: 4 },
     { placement: 1, title: 'RCCS S{season} WORLD CHAMPION', color: '#00FFFF', hasGlow: true, minPlacement: 1, maxPlacement: 1 },
+  ],
+  elite: [
+    { placement: 1, title: 'RCCS S{season} ELITE', color: '#FFD700', hasGlow: true, minPlacement: 1, maxPlacement: 1 }, // Special gold elite title
   ],
 };
 
@@ -163,6 +189,17 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
         major: false,
         worlds: false,
       },
+      
+      // Elite performance tracking
+      playerEliteTracking: {
+        regionalTop3Count: 0,
+        majorTop3Count: 0,
+        worldsTop3Count: 0,
+        hasEliteTitle: false,
+      },
+      
+      // Season tournament locations (randomly assign 2 major locations)
+      seasonMajorLocations: MAJOR_LOCATIONS.sort(() => Math.random() - 0.5).slice(0, 2),
       
       // Available tournaments this season
       availableRegionals: [1, 2, 3, 4],  // All 4 regionals available initially
@@ -463,11 +500,18 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
           // Check if player advances to majors
           const playerTeam = sortedTeams.find(t => t.id === get().playerTeam?.id);
           if (playerTeam && !playerTeam.eliminated) {
-            // Create major tournament (simplified - combining both majors)
+            // Get the location for this major (alternating between the 2 seasonal locations)
+            const { seasonMajorLocations } = get();
+            const majorNumber = tournament.stageNumber || 1;
+            const majorLocation = seasonMajorLocations[(majorNumber - 1) % 2];
+            
+            // Create major tournament with location
             const majorTournament: RCCSTournament = {
-              id: `rccs-s${tournament.season}-majors`,
+              id: `rccs-s${tournament.season}-majors-${majorNumber}`,
               season: tournament.season,
               stage: 'majors',
+              stageNumber: majorNumber,
+              location: majorLocation,
               teams: sortedTeams.slice(0, 12), // Top 6 from each of 2 regionals
               matches: [],
               status: 'active',
@@ -475,7 +519,7 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
               maxTeams: 12,
               rewards: RCCS_REWARDS.majors.map(r => ({
                 ...r,
-                title: r.title.replace('{season}', tournament.season.toString())
+                title: r.title.replace('{season}', tournament.season.toString()).replace('{location}', majorLocation)
               })),
             };
             
@@ -571,6 +615,36 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
         // Award titles to players based on their placement
         tournament.teams.forEach(team => {
           if (team.placement && team.id === get().playerTeam?.id) {
+            // Track elite performance (top 3 finishes)
+            const isTop3 = team.placement <= 3;
+            if (isTop3) {
+              const { playerEliteTracking } = get();
+              
+              // Update elite tracking counters
+              if (tournament.stage === 'regionals') {
+                set(state => ({
+                  playerEliteTracking: {
+                    ...state.playerEliteTracking,
+                    regionalTop3Count: state.playerEliteTracking.regionalTop3Count + 1
+                  }
+                }));
+              } else if (tournament.stage === 'majors') {
+                set(state => ({
+                  playerEliteTracking: {
+                    ...state.playerEliteTracking,
+                    majorTop3Count: state.playerEliteTracking.majorTop3Count + 1
+                  }
+                }));
+              } else if (tournament.stage === 'worlds') {
+                set(state => ({
+                  playerEliteTracking: {
+                    ...state.playerEliteTracking,
+                    worldsTop3Count: state.playerEliteTracking.worldsTop3Count + 1
+                  }
+                }));
+              }
+            }
+            
             // This is the player's team, award them the title(s)
             const earnedTitles: RCCSTournamentReward[] = [];
             
@@ -597,6 +671,32 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
                 console.log(`🏆 Player earned RCCS title: ${titleReward.title} (Placement: ${team.placement})`);
               });
             }
+            
+            // Check for elite title eligibility (consistent top 3 across all tournament types)
+            const updatedTracking = get().playerEliteTracking;
+            if (!updatedTracking.hasEliteTitle && 
+                updatedTracking.regionalTop3Count >= 1 && 
+                updatedTracking.majorTop3Count >= 1 && 
+                updatedTracking.worldsTop3Count >= 1) {
+              
+              // Award the elite title
+              const eliteTitle = RCCS_REWARDS.elite[0];
+              const eliteReward = {
+                ...eliteTitle,
+                title: eliteTitle.title.replace('{season}', tournament.season.toString())
+              };
+              
+              get().awardRCCSTitle(eliteReward.title, 1, 'elite', eliteReward.color);
+              console.log(`🌟 Player earned ELITE status! Consistent top 3 performance across all tournament types`);
+              
+              // Mark elite title as awarded
+              set(state => ({
+                playerEliteTracking: {
+                  ...state.playerEliteTracking,
+                  hasEliteTitle: true
+                }
+              }));
+            }
           }
         });
       },
@@ -616,14 +716,15 @@ export const useRCCSTournament = create<RCCSTournamentStore>()(
           return;
         }
 
-        // Create the RCCS title with aqua color and glow
+        // Create the RCCS title with appropriate color and glow
+        const titleColorValue = titleColor === '#FFD700' ? 'golden' : 'aqua'; // Elite titles are golden, others are aqua
         const rccsTitle = {
           id: titleId,
           name: titleName.toUpperCase(), // Ensure ALL CAPS
           season: get().currentSeason,
           rank: 'RCCS',
           wins: 1,
-          color: 'aqua' as const, // All RCCS titles are aqua with glow
+          color: titleColorValue as 'golden' | 'aqua',
           dateAwarded: new Date().toISOString()
         };
 
