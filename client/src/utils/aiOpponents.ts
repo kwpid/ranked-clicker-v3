@@ -174,7 +174,7 @@ function generateOpponentMMR(playerMMR: number, isTeammate: boolean): number {
 }
 
 export function simulateAIClicks(aiMMR: number, playerCPS: number): number {
-  // AI clicking rate based on fixed ranges per rank with some variation
+  // AI clicking rate - Champion+ adapts to player CPS to keep games competitive
   let baseCPS = 0;
   
   if (aiMMR < 400) {
@@ -193,14 +193,28 @@ export function simulateAIClicks(aiMMR: number, playerCPS: number): number {
     // Diamond level - 7-9 CPS
     baseCPS = 7 + Math.random() * 2;
   } else if (aiMMR < 1900) {
-    // Champion level - 8-10 CPS
-    baseCPS = 8 + Math.random() * 2;
+    // Champion level - Adapts to player CPS ±2 to keep games competitive
+    if (playerCPS > 0) {
+      const adaptiveMin = Math.max(6, playerCPS - 2); // Minimum 6 CPS, player CPS - 2
+      const adaptiveMax = playerCPS + 2; // Player CPS + 2
+      baseCPS = adaptiveMin + Math.random() * (adaptiveMax - adaptiveMin);
+    } else {
+      // Fallback if no player CPS data
+      baseCPS = 8 + Math.random() * 2;
+    }
   } else {
-    // Grand Champion - 10-14 CPS (should be 10+ as requested)
-    baseCPS = 10 + Math.random() * 4; // 10-14 CPS range
+    // Grand Champion - Adapts to player CPS ±2 but with higher minimum
+    if (playerCPS > 0) {
+      const adaptiveMin = Math.max(8, playerCPS - 2); // Minimum 8 CPS, player CPS - 2
+      const adaptiveMax = Math.max(12, playerCPS + 2); // Minimum 12 CPS max, player CPS + 2
+      baseCPS = adaptiveMin + Math.random() * (adaptiveMax - adaptiveMin);
+    } else {
+      // Fallback if no player CPS data
+      baseCPS = 10 + Math.random() * 4; // 10-14 CPS range
+    }
   }
   
-  // Add slight natural variation
+  // Add slight natural variation to make AI feel more human
   baseCPS *= (0.95 + Math.random() * 0.1);
   
   // Convert CPS to clicks per 100ms interval
