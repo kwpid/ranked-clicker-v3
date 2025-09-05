@@ -148,3 +148,29 @@ export function shouldStartNewSeason(): boolean {
   // Check if it's the first day of the month
   return now.getDate() === 1;
 }
+
+// Create rank ladder data for display
+export function getRankLadder() {
+  return [
+    { name: 'Grand Champion', imagePath: '/ranks/grand-champion-div-i.png', color: '#FFD700' },
+    { name: 'Champion III', imagePath: '/ranks/champion-div-iii.png', color: '#9966CC' },
+    { name: 'Champion II', imagePath: '/ranks/champion-div-iii.png', color: '#9966CC' },
+    { name: 'Champion I', imagePath: '/ranks/champion-div-iii.png', color: '#9966CC' },
+    { name: 'Diamond III', imagePath: '/ranks/diamond-div-iii.png', color: '#B9F2FF' },
+    { name: 'Diamond II', imagePath: '/ranks/diamond-div-iii.png', color: '#B9F2FF' },
+    { name: 'Diamond I', imagePath: '/ranks/diamond-div-iii.png', color: '#B9F2FF' },
+    { name: 'Platinum III', imagePath: '/ranks/platinum-div-iii.png', color: '#E5E4E2' },
+    { name: 'Platinum II', imagePath: '/ranks/platinum-div-iii.png', color: '#E5E4E2' },
+    { name: 'Platinum I', imagePath: '/ranks/platinum-div-iii.png', color: '#E5E4E2' },
+    { name: 'Gold III', imagePath: '/ranks/gold-div-iii.png', color: '#FFD700' },
+    { name: 'Gold II', imagePath: '/ranks/gold-div-iii.png', color: '#FFD700' },
+    { name: 'Gold I', imagePath: '/ranks/gold-div-iii.png', color: '#FFD700' },
+    { name: 'Silver III', imagePath: '/ranks/silver-div-iii.png', color: '#C0C0C0' },
+    { name: 'Silver II', imagePath: '/ranks/silver-div-iii.png', color: '#C0C0C0' },
+    { name: 'Silver I', imagePath: '/ranks/silver-div-iii.png', color: '#C0C0C0' },
+    { name: 'Bronze III', imagePath: '/ranks/bronze-div-iii.png', color: '#CD7F32' },
+    { name: 'Bronze II', imagePath: '/ranks/bronze-div-iii.png', color: '#CD7F32' },
+    { name: 'Bronze I', imagePath: '/ranks/bronze-div-iii.png', color: '#CD7F32' },
+    { name: 'Unranked', imagePath: null, color: '#6B7280' }
+  ];
+}

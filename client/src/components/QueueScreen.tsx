@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useGameState } from '../stores/useGameState';
 import { usePlayerData } from '../stores/usePlayerData';
 import { getOnlinePlayerCount, estimateQueueTime } from '../utils/gameLogic';
-import { getRankInfo } from '../utils/rankingSystem';
+import { getRankInfo, getRankLadder } from '../utils/rankingSystem';
 import { setPageTitle, resetPageTitle, showMatchFoundNotification } from '../utils/pageTitle';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -233,6 +233,37 @@ export function QueueScreen() {
           );
         })}
       </div>
+
+      {/* Rank Ladder - Only show in ranked mode */}
+      {queueMode === 'ranked' && (
+        <div className="mb-8">
+          <h3 className="text-xl font-bold text-white mb-4 text-center">Rank Ladder</h3>
+          <Card className="bg-gray-800 border-gray-700 max-w-md mx-auto">
+            <CardContent className="p-4">
+              <div className="space-y-2">
+                {getRankLadder().map((rank, index) => (
+                  <div key={index} className="flex items-center gap-3 py-1">
+                    <div className="flex-shrink-0">
+                      {rank.imagePath ? (
+                        <img 
+                          src={rank.imagePath} 
+                          alt={`${rank.name} rank icon`}
+                          className="w-6 h-6 object-contain"
+                        />
+                      ) : (
+                        <div className="w-6 h-6 bg-gray-600 rounded border border-gray-500"></div>
+                      )}
+                    </div>
+                    <div className="text-sm font-medium" style={{ color: rank.color }}>
+                      {rank.name}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <div className="text-center">
         <div className="inline-flex items-center gap-2 text-sm text-gray-500 bg-gray-800 px-4 py-2 rounded-lg border border-gray-700">
