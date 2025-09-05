@@ -158,9 +158,18 @@ export function LeaderboardScreen({ onBack }: LeaderboardScreenProps) {
                       </div>
                       
                       <div className="flex items-center gap-4 text-sm text-gray-400">
-                        <span style={{ color: rankInfo.color }}>
-                          {rankInfo.name}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {rankInfo.imagePath && (
+                            <img 
+                              src={rankInfo.imagePath} 
+                              alt={`${rankInfo.name} rank icon`}
+                              className="w-5 h-5 object-contain"
+                            />
+                          )}
+                          <span style={{ color: rankInfo.color }}>
+                            {rankInfo.name}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>

@@ -193,8 +193,17 @@ export function RCCSTournamentScreen() {
           </div>
           <div>
             <div className="text-sm text-cyan-400">Your Rank</div>
-            <div className="text-lg font-bold" style={{ color: rankInfo.color }}>
-              {rankInfo.name} {rankInfo.division}
+            <div className="flex items-center gap-2">
+              {rankInfo.imagePath && (
+                <img 
+                  src={rankInfo.imagePath} 
+                  alt={`${rankInfo.name} rank icon`}
+                  className="w-6 h-6 object-contain"
+                />
+              )}
+              <div className="text-lg font-bold" style={{ color: rankInfo.color }}>
+                {rankInfo.name} {rankInfo.division}
+              </div>
             </div>
           </div>
         </div>

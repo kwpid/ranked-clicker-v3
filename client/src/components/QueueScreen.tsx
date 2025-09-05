@@ -181,8 +181,17 @@ export function QueueScreen() {
                     <>
                       {/* Rank Info */}
                       <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-600">
-                        <div className="font-bold text-lg mb-1" style={{ color: rankInfo.color }}>
-                          {rankInfo.name}
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                          {rankInfo.imagePath && (
+                            <img 
+                              src={rankInfo.imagePath} 
+                              alt={`${rankInfo.name} rank icon`}
+                              className="w-8 h-8 object-contain"
+                            />
+                          )}
+                          <div className="font-bold text-lg" style={{ color: rankInfo.color }}>
+                            {rankInfo.name}
+                          </div>
                         </div>
                         {rankInfo.division && (
                           <div className="text-sm text-gray-300 mb-1">Division {rankInfo.division}</div>
