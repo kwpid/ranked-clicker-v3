@@ -180,23 +180,23 @@ export function QueueScreen() {
                   return (
                     <>
                       {/* Rank Info */}
-                      <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-600">
-                        <div className="flex items-center justify-center gap-2 mb-2">
+                      <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-600">
+                        <div className="flex flex-col items-center text-center">
                           {rankInfo.imagePath && (
                             <img 
                               src={rankInfo.imagePath} 
                               alt={`${rankInfo.name} rank icon`}
-                              className="w-8 h-8 object-contain"
+                              className="w-16 h-16 object-contain mb-3"
                             />
                           )}
-                          <div className="font-bold text-lg" style={{ color: rankInfo.color }}>
+                          <div className="font-bold text-lg mb-1" style={{ color: rankInfo.color }}>
                             {rankInfo.name}
                           </div>
+                          {rankInfo.division && (
+                            <div className="text-sm text-gray-300 mb-1">Division {rankInfo.division}</div>
+                          )}
+                          <div className="text-sm text-gray-400">{mmr} MMR</div>
                         </div>
-                        {rankInfo.division && (
-                          <div className="text-sm text-gray-300 mb-1">Division {rankInfo.division}</div>
-                        )}
-                        <div className="text-sm text-gray-400">{mmr} MMR</div>
                       </div>
                       
                       {/* Season Progress */}

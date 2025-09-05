@@ -43,11 +43,16 @@ const RANK_COLORS = {
 // Generate rank image path based on rank and division
 export function getRankImagePath(rankName: string, division?: string): string {
   // Extract tier name (Bronze, Silver, etc.)
-  const [tier] = rankName.split(' ');
+  const [tier, level] = rankName.split(' ');
   
   if (tier === 'Grand' || rankName.startsWith('Grand Champion')) {
-    // Grand Champion is special case
-    return '/ranks/grand-champion-div-i.png';
+    // Grand Champion uses level number for division
+    const gcLevel = rankName.includes(' ') ? rankName.split(' ')[2] || '1' : '1';
+    const divisionMap: { [key: string]: string } = {
+      '1': 'i', '2': 'ii', '3': 'iii', '4': 'iv', '5': 'v'
+    };
+    const divisionSuffix = divisionMap[gcLevel] || 'iii';
+    return `/ranks/grand-champion-div-${divisionSuffix}.png`;
   }
   
   // Convert division to lowercase roman numeral
@@ -59,7 +64,9 @@ export function getRankImagePath(rankName: string, division?: string): string {
     'V': 'v'
   };
   
-  const divisionSuffix = division ? divisionMap[division] || 'i' : 'i';
+  // Use the level from the rank name (e.g., "Silver II" -> "II")
+  const actualDivision = level || 'I';
+  const divisionSuffix = divisionMap[actualDivision] || 'i';
   const tierLower = tier.toLowerCase();
   
   return `/ranks/${tierLower}-div-${divisionSuffix}.png`;
@@ -84,21 +91,14 @@ export function getRankInfo(mmr: number): RankInfo {
           imagePath: getRankImagePath(fullName),
         };
       } else {
-        // Calculate division within rank (I-V, where I is lowest, V is highest)
-        const nextRankEntry = rankEntries.find(([name, thresh]) => thresh > threshold);
-        const nextThreshold = nextRankEntry ? nextRankEntry[1] : threshold + 200;
-        const mmrRange = nextThreshold - threshold;
-        const divisionSize = mmrRange / 5;
-        const divisionIndex = Math.min(4, Math.floor((mmr - threshold) / divisionSize));
-        const divisions = ['I', 'II', 'III', 'IV', 'V'];
-        const division = divisions[divisionIndex];
-        
+        // Use the exact rank name from RANK_THRESHOLDS 
+        // e.g., "Silver II" returns name="Silver II", division="II"
         return {
           name: rankName,
           color,
-          division,
+          division: level, // This is the actual division from the rank name
           tier: Object.keys(RANK_THRESHOLDS).indexOf(rankName),
-          imagePath: getRankImagePath(rankName, division),
+          imagePath: getRankImagePath(rankName),
         };
       }
     }
@@ -110,7 +110,7 @@ export function getRankInfo(mmr: number): RankInfo {
     color: RANK_COLORS.Bronze,
     division: 'I',
     tier: 0,
-    imagePath: getRankImagePath('Bronze I', 'I'),
+    imagePath: getRankImagePath('Bronze I'),
   };
 }
 
