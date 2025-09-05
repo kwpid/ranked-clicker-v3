@@ -47,7 +47,7 @@ export function getRankImagePath(rankName: string, division?: string): string {
   
   if (tier === 'Grand' || rankName.startsWith('Grand Champion')) {
     // All Grand Champion ranks use the same image
-    return '/ranks/grand-champion-div-i.png';
+    return '/ranks/grand-champion-div-iii.png';
   }
   
   // Convert division to lowercase roman numeral
@@ -152,7 +152,7 @@ export function shouldStartNewSeason(): boolean {
 // Create rank ladder data for display
 export function getRankLadder() {
   return [
-    { name: 'Grand Champion', imagePath: '/ranks/grand-champion-div-i.png', color: '#FF0000', glow: true },
+    { name: 'Grand Champion', imagePath: '/ranks/grand-champion-div-iii.png', color: '#FF0000', glow: true },
     { name: 'Champion III', imagePath: '/ranks/champion-div-iii.png', color: '#9966CC' },
     { name: 'Champion II', imagePath: '/ranks/champion-div-iii.png', color: '#9966CC' },
     { name: 'Champion I', imagePath: '/ranks/champion-div-iii.png', color: '#9966CC' },
