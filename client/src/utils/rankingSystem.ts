@@ -47,7 +47,7 @@ export function getRankImagePath(rankName: string, division?: string): string {
   
   if (tier === 'Grand' || rankName.startsWith('Grand Champion')) {
     // Grand Champion is special case
-    return '/ranks/grand-champion-i.png';
+    return '/ranks/grand-champion-div-i.png';
   }
   
   // Convert division to lowercase roman numeral
@@ -62,7 +62,7 @@ export function getRankImagePath(rankName: string, division?: string): string {
   const divisionSuffix = division ? divisionMap[division] || 'i' : 'i';
   const tierLower = tier.toLowerCase();
   
-  return `/ranks/${tierLower}-${divisionSuffix}.png`;
+  return `/ranks/${tierLower}-div-${divisionSuffix}.png`;
 }
 
 export function getRankInfo(mmr: number): RankInfo {
