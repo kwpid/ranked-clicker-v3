@@ -254,7 +254,13 @@ export function QueueScreen() {
                         <div className="w-6 h-6 bg-gray-600 rounded border border-gray-500"></div>
                       )}
                     </div>
-                    <div className="text-sm font-medium" style={{ color: rank.color }}>
+                    <div 
+                      className="text-sm font-medium" 
+                      style={{ 
+                        color: rank.color,
+                        textShadow: rank.glow ? '0 0 8px currentColor' : 'none'
+                      }}
+                    >
                       {rank.name}
                     </div>
                   </div>

@@ -34,10 +34,10 @@ const RANK_COLORS = {
   'Bronze': '#CD7F32',
   'Silver': '#C0C0C0',
   'Gold': '#FFD700',
-  'Platinum': '#E5E4E2',
-  'Diamond': '#B9F2FF',
+  'Platinum': '#B9F2FF',
+  'Diamond': '#0080FF',
   'Champion': '#9966CC',
-  'Grand Champion': '#FFD700',
+  'Grand Champion': '#FF0000',
 };
 
 // Generate rank image path based on rank and division
@@ -152,16 +152,16 @@ export function shouldStartNewSeason(): boolean {
 // Create rank ladder data for display
 export function getRankLadder() {
   return [
-    { name: 'Grand Champion', imagePath: '/ranks/grand-champion-div-i.png', color: '#FFD700' },
+    { name: 'Grand Champion', imagePath: '/ranks/grand-champion-div-i.png', color: '#FF0000', glow: true },
     { name: 'Champion III', imagePath: '/ranks/champion-div-iii.png', color: '#9966CC' },
     { name: 'Champion II', imagePath: '/ranks/champion-div-iii.png', color: '#9966CC' },
     { name: 'Champion I', imagePath: '/ranks/champion-div-iii.png', color: '#9966CC' },
-    { name: 'Diamond III', imagePath: '/ranks/diamond-div-iii.png', color: '#B9F2FF' },
-    { name: 'Diamond II', imagePath: '/ranks/diamond-div-iii.png', color: '#B9F2FF' },
-    { name: 'Diamond I', imagePath: '/ranks/diamond-div-iii.png', color: '#B9F2FF' },
-    { name: 'Platinum III', imagePath: '/ranks/platinum-div-iii.png', color: '#E5E4E2' },
-    { name: 'Platinum II', imagePath: '/ranks/platinum-div-iii.png', color: '#E5E4E2' },
-    { name: 'Platinum I', imagePath: '/ranks/platinum-div-iii.png', color: '#E5E4E2' },
+    { name: 'Diamond III', imagePath: '/ranks/diamond-div-iii.png', color: '#0080FF' },
+    { name: 'Diamond II', imagePath: '/ranks/diamond-div-iii.png', color: '#0080FF' },
+    { name: 'Diamond I', imagePath: '/ranks/diamond-div-iii.png', color: '#0080FF' },
+    { name: 'Platinum III', imagePath: '/ranks/platinum-div-iii.png', color: '#B9F2FF' },
+    { name: 'Platinum II', imagePath: '/ranks/platinum-div-iii.png', color: '#B9F2FF' },
+    { name: 'Platinum I', imagePath: '/ranks/platinum-div-iii.png', color: '#B9F2FF' },
     { name: 'Gold III', imagePath: '/ranks/gold-div-iii.png', color: '#FFD700' },
     { name: 'Gold II', imagePath: '/ranks/gold-div-iii.png', color: '#FFD700' },
     { name: 'Gold I', imagePath: '/ranks/gold-div-iii.png', color: '#FFD700' },
