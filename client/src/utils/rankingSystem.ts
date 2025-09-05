@@ -46,13 +46,8 @@ export function getRankImagePath(rankName: string, division?: string): string {
   const [tier, level] = rankName.split(' ');
   
   if (tier === 'Grand' || rankName.startsWith('Grand Champion')) {
-    // Grand Champion uses level number for division
-    const gcLevel = rankName.includes(' ') ? rankName.split(' ')[2] || '1' : '1';
-    const divisionMap: { [key: string]: string } = {
-      '1': 'i', '2': 'ii', '3': 'iii', '4': 'iv', '5': 'v'
-    };
-    const divisionSuffix = divisionMap[gcLevel] || 'iii';
-    return `/ranks/grand-champion-div-${divisionSuffix}.png`;
+    // All Grand Champion ranks use the same image
+    return '/ranks/grand-champion-div-i.png';
   }
   
   // Convert division to lowercase roman numeral

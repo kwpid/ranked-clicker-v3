@@ -49,8 +49,17 @@ export function StatsScreen() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className="text-sm text-gray-400">Current Rank</div>
-              <div className="font-semibold text-lg" style={{ color: currentRank.color }}>
-                {currentRank.name}
+              <div className="flex items-center gap-2 mb-1">
+                {currentRank.imagePath && (
+                  <img 
+                    src={currentRank.imagePath} 
+                    alt={`${currentRank.name} rank icon`}
+                    className="w-6 h-6 object-contain"
+                  />
+                )}
+                <div className="font-semibold text-lg" style={{ color: currentRank.color }}>
+                  {currentRank.name}
+                </div>
               </div>
               {currentRank.division && (
                 <div className="text-sm text-gray-300">Division {currentRank.division}</div>
@@ -59,8 +68,17 @@ export function StatsScreen() {
             </div>
             <div>
               <div className="text-sm text-gray-400">Best Rank</div>
-              <div className="font-semibold text-lg" style={{ color: bestRank.color }}>
-                {bestRank.name}
+              <div className="flex items-center gap-2 mb-1">
+                {bestRank.imagePath && (
+                  <img 
+                    src={bestRank.imagePath} 
+                    alt={`${bestRank.name} rank icon`}
+                    className="w-6 h-6 object-contain"
+                  />
+                )}
+                <div className="font-semibold text-lg" style={{ color: bestRank.color }}>
+                  {bestRank.name}
+                </div>
               </div>
               {bestRank.division && (
                 <div className="text-sm text-gray-300">Division {bestRank.division}</div>
